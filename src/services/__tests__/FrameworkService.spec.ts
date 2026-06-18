@@ -132,4 +132,25 @@ describe('FrameworkService', () => {
     await expect(localService.get('x', undefined, { bypassErrorToast: true })).rejects.toBeDefined()
     expect(onError).toHaveBeenCalledWith(expect.anything(), { bypassErrorToast: true })
   })
+
+  it('merges default request init into requests', async () => {
+    const localFetch = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+    vi.stubGlobal('fetch', localFetch)
+
+    const localService = new TestService({
+      baseURL: 'https://api.test/',
+      requestInit: {
+        credentials: 'include',
+      },
+    })
+
+    await localService.get('users', undefined, { init: { headers: { 'X-Test': '1' } } })
+
+    expect(localFetch.mock.calls[0][1]?.credentials).toBe('include')
+  })
 })

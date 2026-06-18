@@ -50,8 +50,14 @@ export class FrameworkService {
           parseObjectAsJSON: true,
         },
         interceptor: async (init) => {
+          const requestInit = options.requestInit || {}
           const token = await options.getToken?.()
-          const headers = new Headers({ ...(options.defaultHeaders || {}) })
+          const headers = new Headers({
+            ...(requestInit.headers instanceof Headers
+              ? Object.fromEntries(requestInit.headers.entries())
+              : (requestInit.headers as Record<string, string> | undefined) || {}),
+            ...(options.defaultHeaders || {}),
+          })
           if (init.headers) {
             new Headers(init.headers).forEach((value, key) => headers.set(key, value))
           }
@@ -62,7 +68,7 @@ export class FrameworkService {
             headers.set(tokenHeader, `${tokenPrefix}${token}`)
           }
 
-          return { ...init, headers }
+          return { ...requestInit, ...init, headers }
         },
         effect: {
           onError: async (error) => {

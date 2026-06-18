@@ -24,6 +24,7 @@ export type FrameworkServiceOptions = {
   getToken?: () => string | undefined | Promise<string | undefined>
   tokenHeader?: string
   tokenPrefix?: string
+  requestInit?: ApostleInit
   defaultHeaders?: Record<string, string>
   onUnauthorized?: (error: { status: number; payload: unknown }) => void | Promise<void>
   onError?: (error: unknown, options?: ServiceRequestOptions) => void | Promise<void>
