@@ -52,9 +52,15 @@ export class FrameworkService {
         interceptor: async (init) => {
           const requestInit = options.requestInit || {}
           const token = await options.getToken?.()
+          const inheritedHeaders: Record<string, string> = {}
+          if (requestInit.headers instanceof Headers) {
+            requestInit.headers.forEach((value, key) => {
+              inheritedHeaders[key] = value
+            })
+          }
           const headers = new Headers({
             ...(requestInit.headers instanceof Headers
-              ? Object.fromEntries(requestInit.headers.entries())
+              ? inheritedHeaders
               : (requestInit.headers as Record<string, string> | undefined) || {}),
             ...(options.defaultHeaders || {}),
           })
