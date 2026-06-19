@@ -214,7 +214,8 @@ function buildInputConfig() {
               property[0],
               (() => {
                 const generator = fieldInputConfig.propGenerator?.[property[0]]
-                return generator ? generator(formData.value) : property[1]
+                if (generator) return generator(formData.value)
+                return resolveMappedPropValue(property[1])
               })(),
             ])
           )
@@ -242,6 +243,14 @@ function buildInputConfig() {
       { immediate: true, deep: true }
     )
   })
+}
+
+function resolveMappedPropValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((item) => resolveMappedPropValue(item))
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, nestedValue]) => [key, resolveMappedPropValue(nestedValue)]))
+  }
+  return value
 }
 
 async function preflight() {

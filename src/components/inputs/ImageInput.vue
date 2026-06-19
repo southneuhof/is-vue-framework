@@ -269,7 +269,7 @@ function selectFileManagerAsset(payload: unknown) {
                   @dragleave="handleReplaceDragLeave"
                   @drop="handleReplaceDrop"
                 >
-                  <ImagePreview v-if="element" :imageURL="resolvePreviewURLs(element).imageURL" :thumbnailURL="resolvePreviewURLs(element).thumbnailURL">
+                  <ImagePreview v-if="element" :image="{ url: resolvePreviewURLs(element).imageURL, thumbnail: resolvePreviewURLs(element).thumbnailURL }">
                     <template #actions>
                       <Button color="error" kind="icon" @click="removeItem(index)" type="button">
                         <template #icon>

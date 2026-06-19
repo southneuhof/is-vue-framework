@@ -1,13 +1,10 @@
 import { defineAsyncComponent } from 'vue'
 
-export const componentTypeMap: Record<string, { component?: any; propKeyValue?: [string, string | null][] }> = {
+export const componentTypeMap: Record<string, { component?: any; propKeyValue?: [string, unknown][] }> = {
   chip: { component: defineAsyncComponent(() => import('../../base/Chip.vue')) },
   image: {
     component: defineAsyncComponent(() => import('../../base/ImagePreview.vue')),
-    propKeyValue: [
-      ['thumbnailURL', 'thumbnail_url'],
-      ['imageURL', 'url'],
-    ],
+    propKeyValue: [['image', { thumbnail: 'thumbnail_url', url: 'url' }]],
   },
   location: {
     component: defineAsyncComponent(() => import('../../base/MapView.vue')),
