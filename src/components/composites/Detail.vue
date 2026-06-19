@@ -7,7 +7,10 @@ import {
 import { parse } from "@southneuhof/utilities/parse";
 import { computed, onMounted, ref, type PropType } from "vue";
 import { componentTypeMap, parsedTypes } from "./common/properties";
-import { defaultDetailConfig } from "@southneuhof/is-vue-framework/adapters/defaults";
+import {
+  defaultDetailConfig,
+  mergeDefaultConfig,
+} from "@southneuhof/is-vue-framework/adapters/defaults";
 
 const props = defineProps({
   fields: { type: Array as PropType<string[]>, required: true },
@@ -57,19 +60,14 @@ const props = defineProps({
 });
 
 const fieldSlots = defaultDetailConfig.fieldSlots;
-const fieldsAlias = {
-  ...defaultDetailConfig.fieldsAlias,
-  ...props.fieldsAlias,
-};
-const fieldsProxy = {
-  ...defaultDetailConfig.fieldsProxy,
-  ...props.fieldsProxy,
-};
-const fieldsType = { ...defaultDetailConfig.fieldsType, ...props.fieldsType };
-const fieldsParse = {
-  ...defaultDetailConfig.fieldsParse,
-  ...props.fieldsParse,
-};
+const fieldsAlias =
+  mergeDefaultConfig(defaultDetailConfig.fieldsAlias, props.fieldsAlias) || {};
+const fieldsProxy =
+  mergeDefaultConfig(defaultDetailConfig.fieldsProxy, props.fieldsProxy) || {};
+const fieldsType =
+  mergeDefaultConfig(defaultDetailConfig.fieldsType, props.fieldsType) || {};
+const fieldsParse =
+  mergeDefaultConfig(defaultDetailConfig.fieldsParse, props.fieldsParse) || {};
 const detailFieldTypes = computed(() => getDetailFieldTypes());
 
 // const fields = computed(() => props.fields.filter(field => field.slice(0, 2) !== 'S|'))

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, type PropType } from 'vue'
 import TreeItem from './TreeItem.vue'
-import { defaultTableConfig } from '@southneuhof/is-vue-framework/adapters/defaults'
+import { defaultTableConfig, mergeDefaultConfig } from '@southneuhof/is-vue-framework/adapters/defaults'
 import { defaultTableGetData } from '@southneuhof/is-vue-framework/behaviors/table'
 import { parse } from '@southneuhof/utilities/parse'
 
@@ -25,8 +25,8 @@ const props = defineProps({
   searchParametersGenerator: { type: Function, default: () => ({}) },
 })
 
-const fieldsAlias = { ...defaultTableConfig.fieldsAlias, ...props.fieldsAlias }
-const fieldsProxy = { ...defaultTableConfig.fieldsProxy, ...props.fieldsProxy }
+const fieldsAlias = mergeDefaultConfig(defaultTableConfig.fieldsAlias, props.fieldsAlias) || {}
+const fieldsProxy = mergeDefaultConfig(defaultTableConfig.fieldsProxy, props.fieldsProxy) || {}
 
 function formatTableData(data: Record<string, any>[]) {
   const res: any[] = []

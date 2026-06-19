@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import type { PropType } from 'vue'
 import { defaultTableGetData, getTableFieldTypes } from '@southneuhof/is-vue-framework/behaviors/table'
-import { defaultTableConfig } from '@southneuhof/is-vue-framework/adapters/defaults'
+import { defaultTableConfig, mergeDefaultConfig } from '@southneuhof/is-vue-framework/adapters/defaults'
 import { parse } from '@southneuhof/utilities/parse'
 import Button from '@southneuhof/is-vue-framework/components/base/Button.vue'
 import Icon from '@southneuhof/is-vue-framework/components/base/Icon.vue'
@@ -29,8 +29,8 @@ const props = defineProps({
   searchParametersGenerator: { type: Function, default: () => ({}) },
 })
 
-const fieldsAlias = { ...defaultTableConfig.fieldsAlias, ...props.fieldsAlias }
-const fieldsProxy = { ...defaultTableConfig.fieldsProxy, ...props.fieldsProxy }
+const fieldsAlias = mergeDefaultConfig(defaultTableConfig.fieldsAlias, props.fieldsAlias) || {}
+const fieldsProxy = mergeDefaultConfig(defaultTableConfig.fieldsProxy, props.fieldsProxy) || {}
 
 const children = ref<any[]>([])
 const expanded = ref(false)
@@ -105,6 +105,12 @@ const toggle = async () => {
         :data="child"
         :level="props.level + 1"
         :levels="levels"
+        :fieldsAlias="props.fieldsAlias"
+        :fieldsType="props.fieldsType"
+        :fieldsProxy="props.fieldsProxy"
+        :fieldsDictionary="props.fieldsDictionary"
+        :fieldsUnit="props.fieldsUnit"
+        :fieldsParse="props.fieldsParse"
         :searchParametersGenerator="searchParametersGenerator"
         :getAPI="props.getAPI"
         :searchParameters="props.searchParameters"

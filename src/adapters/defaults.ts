@@ -106,6 +106,19 @@ function deepMergeInto(target: Record<string, any>, source: Record<string, any>)
   }
 }
 
+export function mergeDefaultConfig<T extends Record<string, any>>(...values: Array<T | undefined>): T | undefined {
+  let result: T | undefined
+
+  for (const value of values) {
+    if (!value) continue
+    const nextResult = (result ? cloneValue(result) : {}) as Record<string, any>
+    deepMergeInto(nextResult, value)
+    result = nextResult as T
+  }
+
+  return result
+}
+
 function mergeGlobalDefaults(nextGlobal: FrameworkGlobalDefaults) {
   if (nextGlobal.fieldsAlias) {
     deepMergeInto(defaultTableConfig.fieldsAlias, nextGlobal.fieldsAlias)

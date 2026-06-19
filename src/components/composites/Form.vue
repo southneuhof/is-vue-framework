@@ -7,7 +7,7 @@ import { toast } from 'vue-sonner'
 import { useRoute } from 'vue-router'
 import { componentTypeMap as typeConfigMap } from './common/properties'
 import { keyManager } from '@southneuhof/is-vue-framework/adapters/state'
-import { defaultFormConfig } from '@southneuhof/is-vue-framework/adapters/defaults'
+import { defaultFormConfig, mergeDefaultConfig } from '@southneuhof/is-vue-framework/adapters/defaults'
 import { getInputComponentRegistry, resolveInputComponent } from '../../renderers/inputRegistry'
 import Button from '@southneuhof/is-vue-framework/components/base/Button.vue'
 import Card from '@southneuhof/is-vue-framework/components/base/Card.vue'
@@ -42,8 +42,8 @@ const props = defineProps({
 
 const route = useRoute()
 
-const inputConfig = ref({ ...defaultFormConfig.inputConfig, ...props.inputConfig })
-const fieldsAlias = { ...defaultFormConfig.fieldsAlias, ...props.fieldsAlias }
+const inputConfig = ref(mergeDefaultConfig(defaultFormConfig.inputConfig, props.inputConfig) || {})
+const fieldsAlias = mergeDefaultConfig(defaultFormConfig.fieldsAlias, props.fieldsAlias) || {}
 const fieldDependencyTarget = ref<Record<string, string[]>>({})
 defineEmits<{ (event: string, ...args: any[]): void }>()
 const modelValue = defineModel<any>({ default: () => ({}) })
