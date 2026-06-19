@@ -18,7 +18,7 @@ const emit = defineEmits<{
   (event: 'validation:touch'): void
 }>()
 
-const modelValue = defineModel<string>()
+const modelValue = defineModel<string | null>()
 
 const open = ref(false)
 const query = ref('')
@@ -40,7 +40,7 @@ function pickIcon(iconClass: string) {
 }
 
 function clearSelection() {
-  modelValue.value = ''
+  modelValue.value = null
   emit('validation:touch')
 }
 

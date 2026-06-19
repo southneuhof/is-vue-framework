@@ -60,7 +60,7 @@ const fileManagerOpen = ref(false)
 const fileInput = ref<HTMLInputElement>()
 const dropZoneRef = ref<HTMLDivElement>()
 
-const modelValue = defineModel<any>()
+const modelValue = defineModel<any | null>()
 if (modelValue.value) {
   if (Array.isArray(modelValue.value)) {
     items.value = modelValue.value.map((item) => normalizeFileAssetValue(item)).filter((item): item is FileAssetValue => Boolean(item))

@@ -66,7 +66,7 @@ const props = defineProps({
 
 type ImageAssetValue = FileAssetValue & { order_number?: number }
 
-const modelValue = defineModel<ImageAssetValue | Array<ImageAssetValue>>()
+const modelValue = defineModel<ImageAssetValue | Array<ImageAssetValue> | null>()
 const emit = defineEmits(['update:modelValue', 'update:uploadState', 'validation:touch'])
 
 const uploadPercentage = ref(0)
@@ -91,7 +91,7 @@ if (modelValue.value) {
 const emitData = () => {
   if (props.multi) {
     emit('update:modelValue', images.value)
-  } else emit('update:modelValue', images.value[0])
+  } else emit('update:modelValue', images.value[0] ?? null)
 }
 
 const handleUpload = (file?: File, options: { replace?: boolean } = {}) => {
