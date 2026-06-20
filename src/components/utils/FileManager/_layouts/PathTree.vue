@@ -9,7 +9,7 @@ interface FolderItem {
 }
 
 import { toast } from 'vue-sonner'
-import { getFrameworkBehaviors, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
+import { behavior, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
 import Icon from '@southneuhof/is-vue-framework/components/base/Icon.vue'
 import ConfirmationDialog from '@southneuhof/is-vue-framework/components/composites/ConfirmationDialog.vue'
 import DialogForm from '@southneuhof/is-vue-framework/components/composites/DialogForm.vue'
@@ -77,9 +77,9 @@ async function fetchChildren() {
 
   isLoading.value = true
   try {
-    const behavior = getFrameworkBehaviors().fileManager?.listFiles
-    if (!behavior) missingBehavior('fileManager.listFiles')
-    children.value = (await behavior({ dir: props.item?.path || '', type: 'folder' })) || []
+    const listFiles = behavior.fileManager?.listFiles
+    if (!listFiles) missingBehavior('fileManager.listFiles')
+    children.value = (await listFiles({ dir: props.item?.path || '', type: 'folder' })) || []
   } catch (error) {
     console.error('Error loading children:', error)
     children.value = []
@@ -89,16 +89,16 @@ async function fetchChildren() {
 }
 
 function deleteFile(path: string) {
-  const behavior = getFrameworkBehaviors().fileManager?.deleteFile
-  if (!behavior) missingBehavior('fileManager.deleteFile')
-  return behavior(path)
+  const deleteFile = behavior.fileManager?.deleteFile
+  if (!deleteFile) missingBehavior('fileManager.deleteFile')
+  return deleteFile(path)
 }
 
 async function ensureFolderNameAvailable(dir: string, folderName: string) {
-  const behavior = getFrameworkBehaviors().fileManager?.listFiles
-  if (!behavior) missingBehavior('fileManager.listFiles')
+  const listFiles = behavior.fileManager?.listFiles
+  if (!listFiles) missingBehavior('fileManager.listFiles')
 
-  const existingItems = (await behavior({ dir, limit: 1000 })) || []
+  const existingItems = (await listFiles({ dir, limit: 1000 })) || []
   const normalizedFolderName = String(folderName || '').trim()
   const alreadyExists = existingItems.some((item: Record<string, any>) => item?.path?.split('/').pop() === normalizedFolderName)
 
@@ -110,9 +110,9 @@ async function ensureFolderNameAvailable(dir: string, folderName: string) {
 
 async function createFolder(payload: Record<string, any>) {
   await ensureFolderNameAvailable(payload.dir, payload.folder_name)
-  const behavior = getFrameworkBehaviors().fileManager?.createFolder
-  if (!behavior) missingBehavior('fileManager.createFolder')
-  return behavior(payload.dir, payload.folder_name)
+  const createFolder = behavior.fileManager?.createFolder
+  if (!createFolder) missingBehavior('fileManager.createFolder')
+  return createFolder(payload.dir, payload.folder_name)
 }
 
 function handleDeleteDirectory(path: string) {

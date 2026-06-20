@@ -3,7 +3,7 @@ import { ref, watch, type PropType } from 'vue'
 import PathTree from './_layouts/PathTree.vue'
 import PathDetail from './_layouts/PathDetail.vue'
 import Spinner from '@southneuhof/is-vue-framework/components/base/Spinner.vue'
-import { getFrameworkBehaviors, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
+import { behavior, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
 
 const props = defineProps({
   multi: {
@@ -47,10 +47,10 @@ function getParentPath(path?: string) {
 
 async function getSiblingDirectoryPath(path?: string) {
   const parentPath = getParentPath(path)
-  const behavior = getFrameworkBehaviors().fileManager?.listFiles
-  if (!behavior) missingBehavior('fileManager.listFiles')
+  const listFiles = behavior.fileManager?.listFiles
+  if (!listFiles) missingBehavior('fileManager.listFiles')
 
-  const responseData = (await behavior({ dir: parentPath, type: 'folder' })) || []
+  const responseData = (await listFiles({ dir: parentPath, type: 'folder' })) || []
   const siblingDirectories = responseData.filter((item: Record<string, any>) => item?.path && item.path !== path)
 
   return siblingDirectories[0]?.path || null

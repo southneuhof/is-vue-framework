@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createApp, defineComponent } from 'vue'
-import { getFrameworkBehaviors } from '../../adapters/behaviors'
+import { behavior } from '../../adapters/behaviors'
 import frameworkConfig, { defaultTableConfig } from '../../adapters/defaults'
 import {
   getInputComponentRegistry,
@@ -78,7 +78,7 @@ describe('input registry', () => {
     expect(resolveInputComponent('money')).toBe(MoneyInput)
     expect(frameworkConfig.apiUrl).toBe('https://api.example.com/')
     expect(defaultTableConfig.fieldsAlias.money).toBe('Money')
-    expect(getFrameworkBehaviors().table?.getData).toBe(getData)
+    expect(behavior.table?.getData).toBe(getData)
   })
 
   it('reset clears app-registered inputs but keeps built-ins', () => {

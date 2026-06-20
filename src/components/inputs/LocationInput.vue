@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { GoogleMap, Marker } from 'vue3-google-map'
 import { computed, ref, watch, type PropType } from 'vue'
-import { getFrameworkBehaviors, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
+import { behavior, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
 import { commonProps } from './commonprops'
 import Popover from '../base/Popover.vue'
 import SearchBox from '../composites/SearchBox.vue'
@@ -64,7 +64,7 @@ watch(modelValue, () => {
 async function getLocationDetail(place_id: any) {
   zoom.value = 5
   loading.value = true
-  const getPlaceDetail = getFrameworkBehaviors().location?.getPlaceDetail
+  const getPlaceDetail = behavior.location?.getPlaceDetail
   if (!getPlaceDetail) missingBehavior('location.getPlaceDetail')
   const result = await getPlaceDetail(place_id)
   loading.value = false
@@ -77,7 +77,7 @@ async function getLocationDetail(place_id: any) {
 }
 
 async function getPlacesAutocomplete() {
-  const getPlaceAutocomplete = getFrameworkBehaviors().location?.getPlaceAutocomplete
+  const getPlaceAutocomplete = behavior.location?.getPlaceAutocomplete
   if (!getPlaceAutocomplete) missingBehavior('location.getPlaceAutocomplete')
   autocompletePredictions.value = await getPlaceAutocomplete(query.value)
 }
@@ -104,7 +104,7 @@ function handlePinDragEnd(event: any) {
   emit('validation:touch')
 }
 
-const getMapConfig = getFrameworkBehaviors().location?.getMapConfig
+const getMapConfig = behavior.location?.getMapConfig
 if (!getMapConfig) missingBehavior('location.getMapConfig')
 const { apiKey: GOOGLE_MAP_API_KEY } = await getMapConfig()
 </script>

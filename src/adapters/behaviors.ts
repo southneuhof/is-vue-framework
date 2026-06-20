@@ -99,11 +99,14 @@ export interface FrameworkBehaviors {
   crudDetail?: FrameworkCrudDetailBehaviors
 }
 
-const behaviors: FrameworkBehaviors = {}
+export let behavior: FrameworkBehaviors = {}
 
 function mergeBehaviorGroup<K extends keyof FrameworkBehaviors>(key: K, value: FrameworkBehaviors[K]) {
   if (!value) return
-  behaviors[key] = { ...((behaviors[key] || {}) as object), ...(value as object) } as FrameworkBehaviors[K]
+  behavior = {
+    ...behavior,
+    [key]: { ...((behavior[key] || {}) as object), ...(value as object) } as FrameworkBehaviors[K],
+  }
 }
 
 export function configureFrameworkBehaviors(nextBehaviors: FrameworkBehaviors) {
@@ -112,14 +115,8 @@ export function configureFrameworkBehaviors(nextBehaviors: FrameworkBehaviors) {
   }
 }
 
-export function getFrameworkBehaviors() {
-  return behaviors
-}
-
 export function resetFrameworkBehaviorsForTests() {
-  for (const key of Object.keys(behaviors) as Array<keyof FrameworkBehaviors>) {
-    delete behaviors[key]
-  }
+  behavior = {}
   resetFrameworkDefaultsForTests()
 }
 

@@ -1,7 +1,7 @@
-import { getFrameworkBehaviors, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
+import { behavior, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
 
 export async function defaultOnExport(detailConfig: any, id: number) {
-  const behavior = getFrameworkBehaviors().crudDetail?.onExport
-  if (!behavior) missingBehavior('crudDetail.onExport')
-  return behavior(detailConfig, id)
+  const onExport = behavior.crudDetail?.onExport
+  if (!onExport) missingBehavior('crudDetail.onExport')
+  return onExport(detailConfig, id)
 }

@@ -1,17 +1,17 @@
-import { getFrameworkBehaviors, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
+import { behavior, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
 
 export async function defaultDetailGetData(getAPI: string, searchParameters?: Record<string, any>, getDataID?: string) {
-  const getData = getFrameworkBehaviors().detail?.getData
+  const getData = behavior.detail?.getData
   if (!getData) missingBehavior('detail.getData')
   return getData(getAPI, searchParameters, getDataID)
 }
 
 export function defaultOnDataLoaded(data?: any) {
-  return getFrameworkBehaviors().detail?.onDataLoaded?.(data)
+  return behavior.detail?.onDataLoaded?.(data)
 }
 
 export function getDetailFieldTypes(): Record<string, any> {
-  return getFrameworkBehaviors().detail?.fieldTypes ?? {}
+  return behavior.detail?.fieldTypes ?? {}
 }
 
 // Backward compatibility: previous API exported a constant.

@@ -1,17 +1,17 @@
-import { getFrameworkBehaviors, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
+import { behavior, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
 
 export async function defaultTableGetData(getAPI: string, searchParameters?: Record<string, number | string | undefined>) {
-  const getData = getFrameworkBehaviors().table?.getData
+  const getData = behavior.table?.getData
   if (!getData) missingBehavior('table.getData')
   return getData(getAPI, searchParameters)
 }
 
 export function defaultOnDataLoaded(data?: any) {
-  return getFrameworkBehaviors().table?.onDataLoaded?.(data)
+  return behavior.table?.onDataLoaded?.(data)
 }
 
 export function getTableFieldTypes(): Record<string, any> {
-  return getFrameworkBehaviors().table?.fieldTypes ?? {}
+  return behavior.table?.fieldTypes ?? {}
 }
 
 // Backward compatibility: previous API exported a constant.

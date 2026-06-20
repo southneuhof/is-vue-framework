@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { parse } from '@southneuhof/utilities/parse'
 import { ref, watch } from 'vue'
-import { getFrameworkBehaviors, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
+import { behavior, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
 import { useDropZone } from '@vueuse/core'
 import { ContextMenuContent, ContextMenuItem, ContextMenuPortal, ContextMenuTrigger, ContextMenuRoot } from 'radix-vue'
 import { toast } from 'vue-sonner'
@@ -63,9 +63,9 @@ const ROOT_VISIBLE_SEGMENTS = ['storage', 'public']
 const ROOT_STORAGE_PATH = '/storage/public'
 
 async function getData() {
-  const behavior = getFrameworkBehaviors().fileManager?.listFiles
-  if (!behavior) missingBehavior('fileManager.listFiles')
-  const responseData = await behavior(searchParameters.value)
+  const listFiles = behavior.fileManager?.listFiles
+  if (!listFiles) missingBehavior('fileManager.listFiles')
+  const responseData = await listFiles(searchParameters.value)
 
   if (Array.isArray(responseData) && responseData.length > 0 && typeof responseData[0] === 'object' && responseData[0] !== null && '0' in responseData[0]) {
     data.value = responseData.map((item: any) => item[Object.keys(item)[0]])
@@ -130,7 +130,7 @@ function handleRowClick(item: any) {
 
 async function onDrop(files: File[] | null) {
   if (files && files.length > 0) {
-    const uploadFile = getFrameworkBehaviors().fileManager?.uploadFile
+    const uploadFile = behavior.fileManager?.uploadFile
     if (!uploadFile) missingBehavior('fileManager.uploadFile')
     const uploadPromises = files.map((file) => uploadFile(file, modelValue.value?.path))
 
@@ -152,16 +152,16 @@ await getData()
 const _window = window
 
 function deleteFile(path: string) {
-  const behavior = getFrameworkBehaviors().fileManager?.deleteFile
-  if (!behavior) missingBehavior('fileManager.deleteFile')
-  return behavior(path)
+  const deleteFile = behavior.fileManager?.deleteFile
+  if (!deleteFile) missingBehavior('fileManager.deleteFile')
+  return deleteFile(path)
 }
 
 async function ensureFolderNameAvailable(dir: string, folderName: string) {
-  const behavior = getFrameworkBehaviors().fileManager?.listFiles
-  if (!behavior) missingBehavior('fileManager.listFiles')
+  const listFiles = behavior.fileManager?.listFiles
+  if (!listFiles) missingBehavior('fileManager.listFiles')
 
-  const existingItems = (await behavior({ dir, limit: 1000 })) || []
+  const existingItems = (await listFiles({ dir, limit: 1000 })) || []
   const normalizedFolderName = String(folderName || '').trim()
   const alreadyExists = existingItems.some((item: Record<string, any>) => item?.path?.split('/').pop() === normalizedFolderName)
 
@@ -173,9 +173,9 @@ async function ensureFolderNameAvailable(dir: string, folderName: string) {
 
 async function createFolder(payload: Record<string, any>) {
   await ensureFolderNameAvailable(payload.dir, payload.folder_name)
-  const behavior = getFrameworkBehaviors().fileManager?.createFolder
-  if (!behavior) missingBehavior('fileManager.createFolder')
-  return behavior(payload.dir, payload.folder_name)
+  const createFolder = behavior.fileManager?.createFolder
+  if (!createFolder) missingBehavior('fileManager.createFolder')
+  return createFolder(payload.dir, payload.folder_name)
 }
 
 function handleDeleteItem(item: Record<string, any>) {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { configureFrameworkBehaviors, getFrameworkBehaviors, missingBehavior, resetFrameworkBehaviorsForTests } from '../behaviors'
+import { behavior, configureFrameworkBehaviors, missingBehavior, resetFrameworkBehaviorsForTests } from '../behaviors'
 import config, { applyFrameworkConfig, applyFrameworkDefaults, defaultDetailConfig, defaultFormConfig, defaultTableConfig, mode } from '../defaults'
 
 describe('framework behavior registry', () => {
@@ -14,7 +14,7 @@ describe('framework behavior registry', () => {
       table: { getData },
     })
 
-    expect(getFrameworkBehaviors().table?.getData).toBe(getData)
+    expect(behavior.table?.getData).toBe(getData)
   })
 
   it('merges behavior groups without replacing existing members', () => {
@@ -24,12 +24,22 @@ describe('framework behavior registry', () => {
     configureFrameworkBehaviors({ table: { getData } })
     configureFrameworkBehaviors({ table: { onDataLoaded } })
 
-    expect(getFrameworkBehaviors().table?.getData).toBe(getData)
-    expect(getFrameworkBehaviors().table?.onDataLoaded).toBe(onDataLoaded)
+    expect(behavior.table?.getData).toBe(getData)
+    expect(behavior.table?.onDataLoaded).toBe(onDataLoaded)
   })
 
   it('throws a clear missing behavior error', () => {
     expect(() => missingBehavior('table.getData')).toThrow('Missing behavior: table.getData')
+  })
+
+  it('starts empty and resets back to empty', () => {
+    expect(behavior).toEqual({})
+
+    configureFrameworkBehaviors({ table: { getData: async () => ({ data: [], total: 0, totalPage: 0 }) } })
+    expect(behavior.table?.getData).toBeTypeOf('function')
+
+    resetFrameworkBehaviorsForTests()
+    expect(behavior).toEqual({})
   })
 
   it('applies defaults through defaults registry API', () => {

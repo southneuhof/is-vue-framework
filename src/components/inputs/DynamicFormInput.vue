@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import RadioGroup from '@southneuhof/is-vue-framework/components/inputs/RadioGroupInput.vue'
 import { onMounted, ref, type PropType } from 'vue'
-import { getFrameworkBehaviors, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
+import { behavior, missingBehavior } from '@southneuhof/is-vue-framework/adapters/behaviors'
 
 const props = defineProps({
   templateAPI: { type: String, required: true },
@@ -14,7 +14,7 @@ const props = defineProps({
 const modelValue = defineModel<any>()
 onMounted(() => {
   if (!modelValue.value) {
-    const getTemplate = getFrameworkBehaviors().dynamicForm?.getTemplate
+    const getTemplate = behavior.dynamicForm?.getTemplate
     if (!getTemplate) missingBehavior('dynamicForm.getTemplate')
     getTemplate(props.templateAPI).then((data) => {
       modelValue.value = data
