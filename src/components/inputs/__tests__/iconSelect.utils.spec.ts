@@ -56,5 +56,7 @@ describe('iconSelect utils', () => {
     expect(normalizeRemixiconClass('ri-home-fill')).toBe('ri-home-fill')
     expect(normalizeRemixiconClass('home')).toBe('')
     expect(normalizeRemixiconClass('')).toBe('')
+    expect(normalizeRemixiconClass(42)).toBe('')
+    expect(normalizeRemixiconClass({ class: 'ri-home-line' })).toBe('')
   })
 })
