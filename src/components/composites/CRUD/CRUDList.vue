@@ -33,6 +33,7 @@ const [route, router] = [useRoute(), useRouter()];
 if (!props.config.title) props.config.title = String(route.meta.title);
 
 const searchParameters = ref<Record<string, any>>({});
+const effectiveTableSearchParameters = ref<Record<string, any>>({});
 const visibleFields = ref<Record<string, boolean>>({});
 
 const listConfig = ref<ListConfig>(
@@ -83,6 +84,27 @@ const filterProps = computed(() => ({
     ...(listConfig.value.filter?.inputConfig || {}),
   },
 }));
+
+const mergedSearchParameters = computed(() => ({
+  ...listConfig.value.searchParameters,
+  ...searchParameters.value,
+}));
+
+const exportQueryParameters = computed(() => {
+  const activeParams = Object.keys(effectiveTableSearchParameters.value).length
+    ? effectiveTableSearchParameters.value
+    : mergedSearchParameters.value;
+
+  return { ...activeParams };
+});
+
+function handleExport() {
+  listConfig.value.export?.onExport?.({
+    exportAPI: listConfig.value.export?.exportAPI!,
+    params: exportQueryParameters.value,
+    listConfig: listConfig.value,
+  });
+}
 
 function handleVisibleFields(field: string, enable: boolean) {
   if (!listConfig.value.fields) return;
@@ -156,7 +178,7 @@ onMounted(() => {
                           </Button>
                         </template>
                         <template #content>
-                          <Card class="w-[350px]" variant="outlined">
+                          <Card class="w-[350px] gap-2" variant="outlined">
                             <Form
                               :key="
                                 keyManager().value[`sys_${config.name}_name`]
@@ -178,6 +200,17 @@ onMounted(() => {
                               "
                             >
                               Reset Filter
+                            </Button>
+                            <Button
+                              v-if="listConfig.export?.allow"
+                              variant="outlined"
+                              class="w-full"
+                              @click="handleExport"
+                            >
+                              <template #icon>
+                                <Icon name="file-excel"></Icon>
+                              </template>
+                              Export Data
                             </Button>
                           </Card>
                         </template>
@@ -223,16 +256,12 @@ onMounted(() => {
                   <Tooltip>
                     <template #trigger>
                       <Button
-                        v-if="listConfig.export?.allow"
-                        kind="icon"
-                        @click="
-                          () =>
-                            listConfig.export?.onExport?.({
-                              exportAPI: listConfig.export?.exportAPI!,
-                              params: searchParameters,
-                              listConfig: listConfig,
-                            })
+                        v-if="
+                          listConfig.export?.allow &&
+                          !config.view?.list?.filter?.fields?.length
                         "
+                        kind="icon"
+                        @click="handleExport"
                       >
                         <template #icon>
                           <Icon name="file-excel"></Icon>
@@ -283,8 +312,7 @@ onMounted(() => {
         name="list-dashboard"
         v-bind="{
           queryParameters: {
-            ...listConfig.searchParameters,
-            ...searchParameters,
+            ...mergedSearchParameters,
           },
         }"
       />
@@ -303,13 +331,15 @@ onMounted(() => {
                   :key="keyManager().value[`${config.name}_table`]"
                   v-bind="listConfig"
                   :fields="listConfig.fields!"
-                  :searchParameters="{
-                    ...listConfig.searchParameters,
-                    ...searchParameters,
-                  }"
+                  :searchParameters="mergedSearchParameters"
                   paginated
                   sortable
                   hoverEffect
+                  @update:searchParameters="
+                    (params: Record<string, any>) => {
+                      effectiveTableSearchParameters = { ...params };
+                    }
+                  "
                   :onDataLoaded="
                     (data: Array<any>) => {
                       visibleFields = listConfig.toggleableFields

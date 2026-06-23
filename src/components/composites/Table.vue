@@ -17,6 +17,10 @@ import Button from "@southneuhof/is-vue-framework/components/base/Button.vue";
 import Card from "@southneuhof/is-vue-framework/components/base/Card.vue";
 import Icon from "@southneuhof/is-vue-framework/components/base/Icon.vue";
 
+const emit = defineEmits<{
+  (event: "update:searchParameters", value: Record<string, any>): void;
+}>();
+
 const props = defineProps({
   fields: { type: Array as PropType<string[]>, required: true },
   fieldsAlias: {
@@ -219,9 +223,10 @@ if (props.data) {
 watch(
   localsearchParameters,
   () => {
+    emit("update:searchParameters", { ...localsearchParameters.value });
     loadData();
   },
-  { deep: true },
+  { deep: true, immediate: true },
 );
 
 const rowExpandActiveIndex = ref();
