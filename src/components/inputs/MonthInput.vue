@@ -3,7 +3,7 @@ import Datepicker from '@vuepic/vue-datepicker'
 import { useColorPreference } from '@southneuhof/is-vue-framework/adapters/state'
 import BaseInput from './BaseInput.vue'
 import { commonProps } from './commonprops'
-import { ref, watch } from 'vue'
+import { ref, watch, type PropType } from 'vue'
 import { lightFormat } from 'date-fns'
 
 const props = defineProps({
@@ -24,6 +24,10 @@ const props = defineProps({
   },
   minDate: {
     type: String,
+  },
+  teleport: {
+    type: [Boolean, String, HTMLElement] as PropType<boolean | string | HTMLElement>,
+    default: true,
   },
   ...commonProps,
 })
@@ -80,6 +84,7 @@ function displayFormatter(date: Date) {
       :inline="inline"
       :format="displayFormatter"
       :dark="useColorPreference().value === 'dark'"
+      :teleport="props.teleport"
     />
   </BaseInput>
 </template>
