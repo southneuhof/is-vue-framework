@@ -62,4 +62,12 @@ describe('file asset value normalization', () => {
       size: 0,
     })
   })
+
+  it('infers video content type from persisted paths', () => {
+    expect(normalizeFileAssetValue('/storage/public/banner.mp4')).toMatchObject({
+      type: 'file',
+      path: '/storage/public/banner.mp4',
+      content_type: 'video/mp4',
+    })
+  })
 })

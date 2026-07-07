@@ -10,6 +10,7 @@ const builtInInputComponents: Record<string, Component> = {
   password: defineAsyncComponent(() => import('../components/inputs/PasswordInput.vue')),
   file: defineAsyncComponent(() => import('../components/inputs/FileInput.vue')),
   image: defineAsyncComponent(() => import('../components/inputs/ImageInput.vue')),
+  media: defineAsyncComponent(() => import('../components/inputs/MediaInput.vue')),
   select: defineAsyncComponent(() => import('../components/inputs/SelectInput.vue')),
   radio: defineAsyncComponent(() => import('../components/inputs/RadioGroupInput.vue')),
   date: defineAsyncComponent(() => import('../components/inputs/DateInput.vue')),

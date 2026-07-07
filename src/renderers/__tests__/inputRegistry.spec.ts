@@ -32,6 +32,10 @@ describe('input registry', () => {
     expect(resolveInputComponent('color')).toBeDefined()
   })
 
+  it('resolves built-in renderer for media', () => {
+    expect(resolveInputComponent('media')).toBeDefined()
+  })
+
   it('resolves registered direct component by custom key', () => {
     const MoneyInput = DummyComponent('MoneyInput')
     registerInputComponents({ money: MoneyInput })

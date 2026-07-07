@@ -39,6 +39,10 @@ function inferContentType(filename: string, fallback = 'application/octet-stream
   if (lower.endsWith('.webp')) return 'image/webp'
   if (lower.endsWith('.gif')) return 'image/gif'
   if (lower.endsWith('.svg')) return 'image/svg+xml'
+  if (lower.endsWith('.mp4')) return 'video/mp4'
+  if (lower.endsWith('.webm')) return 'video/webm'
+  if (lower.endsWith('.ogv') || lower.endsWith('.ogg')) return 'video/ogg'
+  if (lower.endsWith('.mov')) return 'video/quicktime'
   if (lower.endsWith('.pdf')) return 'application/pdf'
   if (lower.endsWith('.txt')) return 'text/plain'
   return fallback
