@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, type PropType, watch, provide, onMounted, nextTick } from 'vue'
-import { evaluateFieldDependencies, type FieldDependency, type InputConfig } from '@southneuhof/is-data-model'
+import { evaluateFieldDependencies, mergeInputConfig, type FieldDependency, type InputConfig } from '@southneuhof/is-data-model'
 import { defaultBeforeSubmit, defaultFormGetData, defaultOnError, defaultOnSubmit, defaultOnSuccess } from '@southneuhof/is-vue-framework/behaviors/form'
 import { executeValidationRules } from '@southneuhof/is-vue-framework/behaviors/validations'
 import { toast } from 'vue-sonner'
@@ -42,7 +42,7 @@ const props = defineProps({
 
 const route = useRoute()
 
-const inputConfig = ref(mergeDefaultConfig(defaultFormConfig.inputConfig, props.inputConfig) || {})
+const inputConfig = ref(mergeInputConfig(defaultFormConfig.inputConfig, props.inputConfig) || {})
 const fieldsAlias = mergeDefaultConfig(defaultFormConfig.fieldsAlias, props.fieldsAlias) || {}
 const fieldDependencyTarget = ref<Record<string, string[]>>({})
 defineEmits<{ (event: string, ...args: any[]): void }>()

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { mergeInputConfig } from '@southneuhof/is-data-model'
 import { resetFrameworkBehaviorsForTests } from '../behaviors'
 import { applyFrameworkDefaults, defaultDetailConfig, defaultFormConfig, defaultTableConfig, mergeDefaultConfig } from '../defaults'
 
@@ -64,7 +65,7 @@ describe('component default resolution compatibility', () => {
 
     const resolved = {
       fieldsAlias: mergeDefaultConfig(defaultFormConfig.fieldsAlias, undefined) || {},
-      inputConfig: mergeDefaultConfig(defaultFormConfig.inputConfig, {
+      inputConfig: mergeInputConfig(defaultFormConfig.inputConfig, {
         name: { props: { placeholder: 'Nama' } },
       }) || {},
     }
@@ -73,5 +74,19 @@ describe('component default resolution compatibility', () => {
     expect(resolved.inputConfig.name?.type).toBe('text')
     expect((resolved.inputConfig.name as any)?.props?.required).toBe(true)
     expect((resolved.inputConfig.name as any)?.props?.placeholder).toBe('Nama')
+  })
+
+  it('lets explicit form field declarations replace default input props', () => {
+    applyFrameworkDefaults({
+      form: {
+        inputConfig: { title: { type: 'text', props: { required: true } } },
+      },
+    })
+
+    const inputConfig = mergeInputConfig(defaultFormConfig.inputConfig, {
+      title: { type: 'text' },
+    }) || {}
+
+    expect(inputConfig.title).toEqual({ type: 'text' })
   })
 })

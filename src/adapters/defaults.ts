@@ -1,4 +1,4 @@
-import type { InputConfig } from '@southneuhof/is-data-model'
+import { mergeInputConfig, type InputConfig } from '@southneuhof/is-data-model'
 
 export interface FrameworkGlobalDefaults {
   fieldsAlias?: Record<string, string>
@@ -92,6 +92,11 @@ function cloneValue<T>(value: T): T {
 
 function deepMergeInto(target: Record<string, any>, source: Record<string, any>) {
   for (const [key, incoming] of Object.entries(source)) {
+    if (key === 'inputConfig' && isPlainObject(incoming)) {
+      target[key] = mergeInputConfig(target[key], incoming as InputConfig) || {}
+      continue
+    }
+
     if (isPlainObject(incoming)) {
       const existing = target[key]
       if (isPlainObject(existing)) deepMergeInto(existing, incoming)
