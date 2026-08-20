@@ -201,22 +201,16 @@ function resolvePreviewURLs(payload: ImageAssetValue) {
 }
 
 function resolveDragKey(item: ImageAssetValue, index: number): string {
-  return item?.url || item?.path || `image-${index}`
+  return item?.id || item?.url || `image-${index}`
 }
 
 function normalizeImageAsset(payload: unknown): ImageAssetValue | null {
-  if (typeof payload === 'string') {
-    return {
-      kind: 'file',
-      path: payload,
-      url: payload,
-      name: payload.split('/').pop() || 'image'
-    } as ImageAssetValue
-  }
-  const normalized = toInputAssetValue(payload)
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null
+  const { order_number: orderNumber, ...candidate } = payload as Record<string, unknown>
+  const normalized = toInputAssetValue(candidate)
   if (!normalized) return null
 
-  return normalized as ImageAssetValue
+  return typeof orderNumber === 'number' ? { ...normalized, order_number: orderNumber } : normalized
 }
 
 async function selectFileManagerAsset(payload: ManagedAsset) {

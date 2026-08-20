@@ -4,6 +4,7 @@ import { createFrameworkQueryClient } from '../../query/client'
 import { resolveFrameworkAdapters } from '../../adapters/projectAdapters'
 import { resolveFrameworkFieldDefaults } from '../../fields/defaults'
 import { defineFields } from '../../fields/defineFields'
+import { createInputPropsRegistry } from '../../renderers/inputProps'
 import { defineResource } from '../defineResource'
 import { defineSchema } from '../defineSchema'
 import { resetResourceActionRegistry } from '../routeAccess'
@@ -16,6 +17,15 @@ type Schema = WebResourceSchema<Row, Record<string, never>, Draft, Draft, string
 const schema = defineSchema<Schema>({ identity: 'id' })
 const fields = defineFields(schema, {
   name: { label: 'Name', table: { sortable: true }, form: { renderer: 'text' } },
+})
+
+type AssetRecord = { id: string; imgThumbnail: string | null }
+type AssetDraft = { imgThumbnail?: string | null }
+type AssetSchema = WebResourceSchema<AssetRecord, Record<string, never>, AssetDraft, AssetDraft, string>
+
+const assetSchema = defineSchema<AssetSchema>({ identity: 'id' })
+const assetFields = defineFields(assetSchema, {
+  imgThumbnail: { label: 'Image', form: { renderer: 'image' } },
 })
 
 function resource(access = { allows: () => true }) {
@@ -66,6 +76,31 @@ afterEach(() => {
 })
 
 describe('action resources', () => {
+  it('reads wire asset values before resource records reach the UI', async () => {
+    const read = (value: unknown) => typeof value === 'string'
+      ? { kind: 'file', id: value, url: `https://files.test/${value}`, name: value.split('/').pop() }
+      : value
+    registerResourceRuntime({
+      queryClient: createFrameworkQueryClient(),
+      adapters: resolveFrameworkAdapters(),
+      fieldDefaults: resolveFrameworkFieldDefaults(),
+      inputProps: createInputPropsRegistry({ image: { value: { read, write: (value) => value } } }),
+    })
+    const value = defineResource(assetSchema, {
+      key: 'asset-records',
+      actions: {
+        detail: {
+          run: async () => ({ id: '1', imgThumbnail: 'uploads/cover.png' }),
+          fields: [assetFields.imgThumbnail],
+        },
+      },
+    })
+
+    await expect(value.detail({ id: '1' }).run()).resolves.toMatchObject({
+      imgThumbnail: { kind: 'file', id: 'uploads/cover.png', name: 'cover.png' },
+    })
+  })
+
   it('builds standard surfaces and keeps custom actions explicit', async () => {
     const value = resource()
     const list = value.list()

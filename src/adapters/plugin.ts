@@ -29,11 +29,12 @@ export const FrameworkPlugin: Plugin<[options?: FrameworkPluginOptions]> = {
     app.provide(frameworkAdaptersKey, adapters)
 
     app.provide(rendererRegistriesKey, createRendererRegistries(options?.renderers))
-    app.provide(inputPropsRegistryKey, options.inputProps ?? emptyInputPropsRegistry())
+    const inputProps = options.inputProps ?? emptyInputPropsRegistry()
+    app.provide(inputPropsRegistryKey, inputProps)
 
     const queryClient = options?.queryClient ?? createFrameworkQueryClient(adapters.queryDefaults)
     app.provide(frameworkQueryClientKey, queryClient)
     app.use(VueQueryPlugin, { queryClient })
-    registerResourceRuntime({ adapters, queryClient, fieldDefaults })
+    registerResourceRuntime({ adapters, queryClient, fieldDefaults, inputProps })
   },
 }

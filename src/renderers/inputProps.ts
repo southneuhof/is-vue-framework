@@ -4,9 +4,15 @@ export interface InputPropsResolutionContext {
   field?: { key: string; label?: string }
 }
 
+export interface InputValueAdapter {
+  read: (value: unknown) => unknown
+  write: (value: unknown) => unknown
+}
+
 export interface InputPropsAdapter<TSource = never, TProps extends Record<string, unknown> = Record<string, unknown>> {
   defaults?: Readonly<Partial<TProps>>
   normalize?: (source: TSource, context: InputPropsResolutionContext) => Readonly<Partial<TProps>>
+  value?: InputValueAdapter
 }
 
 type AdapterMap = Record<string, InputPropsAdapter<any, any>>
@@ -17,6 +23,8 @@ export interface InputPropsRegistry {
     props?: Record<string, unknown>
     context?: InputPropsResolutionContext
   }) => Record<string, unknown>
+  read: (renderer: string, value: unknown) => unknown
+  write: (renderer: string, value: unknown) => unknown
 }
 
 function objectResult(value: unknown, renderer: string, field?: string): Record<string, unknown> {
@@ -38,6 +46,7 @@ export function createInputPropsRegistry<const TAdapters extends AdapterMap>(ada
   const copied = new Map<string, InputPropsAdapter>(Object.entries(adapters).map(([key, adapter]) => [key, {
     ...adapter,
     ...(adapter.defaults ? { defaults: { ...adapter.defaults } } : {}),
+    ...(adapter.value ? { value: { ...adapter.value } } : {}),
   }]))
   const resolve: InputPropsRegistry['resolve'] = (renderer, input) => {
     const adapter = copied.get(renderer)
@@ -54,7 +63,9 @@ export function createInputPropsRegistry<const TAdapters extends AdapterMap>(ada
     const normalized = objectResult((adapter.normalize as (source: unknown, context: InputPropsResolutionContext) => unknown)(input.source, context), renderer, field)
     return { ...defaults, ...normalized, ...(input.props ?? {}) }
   }
-  return { resolve }
+  const read: InputPropsRegistry['read'] = (renderer, value) => copied.get(renderer)?.value?.read(value) ?? value
+  const write: InputPropsRegistry['write'] = (renderer, value) => copied.get(renderer)?.value?.write(value) ?? value
+  return { resolve, read, write }
 }
 
 export function emptyInputPropsRegistry(): InputPropsRegistry {

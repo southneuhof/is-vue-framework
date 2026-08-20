@@ -113,12 +113,12 @@ function progressPercentage(progress?: UploadProgress) {
 function syncPersistedRows(value: unknown) {
   const current = persistedItems()
   const normalized = (Array.isArray(value) ? value : [value])
-    .map((item) => toInputAssetValue(item) ?? (typeof item === 'string' ? current.find((currentItem) => currentItem.path === item) : null))
+    .map((item) => toInputAssetValue(item) ?? (typeof item === 'string' ? current.find((currentItem) => currentItem.id === item) : null))
     .filter((item): item is InputAssetValue => Boolean(item))
   if (
     current.length === normalized.length &&
     current.every((item, index) =>
-      item.path === normalized[index].path &&
+      item.id === normalized[index].id &&
       item.url === normalized[index].url &&
       item.name === normalized[index].name,
     )

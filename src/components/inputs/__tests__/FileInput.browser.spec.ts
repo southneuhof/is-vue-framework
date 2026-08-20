@@ -6,7 +6,7 @@ import { createFrameworkQueryClient } from '../../../query'
 
 type Asset = {
   kind: 'file'
-  path: string
+  id: string
   url: string
   name: string
 }
@@ -14,7 +14,7 @@ type Asset = {
 function asset(name: string): Asset {
   return {
     kind: 'file',
-    path: `/uploads/${name}`,
+    id: `/uploads/${name}`,
     url: `https://files.test/${name}`,
     name,
   }
@@ -42,7 +42,7 @@ afterEach(() => {
 })
 
 describe('FileInput browser behavior', () => {
-  it('keeps the uploaded file visible when a controlled form stores its path', async () => {
+  it('keeps the uploaded file visible when a controlled form stores its identity', async () => {
     const upload = async () => asset('first.pdf')
     const model = ref<Record<string, unknown>>({ file: null })
     const host = document.createElement('div')
@@ -54,8 +54,8 @@ describe('FileInput browser behavior', () => {
             label: 'File',
             form: { renderer: 'file', props: { upload } },
             write: (draft: Record<string, unknown>, value: unknown) => {
-              const file = value as { path?: unknown }
-              draft.file = typeof file?.path === 'string' ? file.path : value
+              const file = value as { id?: unknown }
+              draft.file = typeof file?.id === 'string' ? file.id : value
             },
           },
         },

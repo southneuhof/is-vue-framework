@@ -45,6 +45,8 @@ export interface DraftValidationOptions<TDraft extends object> {
   schema?: ValidationSchema<TDraft>
   /** The visibility-filtered draft — hidden fields contribute no value. */
   draft: Partial<TDraft>
+  /** Optional value prepared for schema validation; draft stays the form value. */
+  validatedDraft?: Partial<TDraft>
   /** Field keys currently hidden by behavior, used for the diagnostic below. */
   hiddenKeys?: readonly string[]
 }
@@ -69,7 +71,8 @@ export function assertNoHiddenRequiredFields(schema: ValidationSchema | undefine
 export function validateDraft<TDraft extends object>(
   options: DraftValidationOptions<TDraft>,
 ): ValidationResult<TDraft> {
-  const { schema, draft } = options
+  const { schema, draft: formDraft } = options
+  const draft = options.validatedDraft ?? formDraft
   assertNoHiddenRequiredFields(schema, options.hiddenKeys ?? [])
   if (!schema) return { success: true, data: draft as TDraft }
   return schema.validate(draft)

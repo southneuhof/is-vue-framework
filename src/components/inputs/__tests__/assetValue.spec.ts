@@ -5,7 +5,7 @@ describe('canonical input asset values', () => {
   it('accepts canonical camelCase values', () => {
     const value = {
       kind: 'file' as const,
-      path: '/storage/public/a.jpg',
+      id: '/storage/public/a.jpg',
       url: 'https://landing.test/storage/public/a.jpg',
       name: 'a.jpg',
       size: 12,
@@ -20,7 +20,7 @@ describe('canonical input asset values', () => {
     { data: '/storage/public/a.pdf' },
     { type: 'file', path: '/a', url: '/a', filename: 'a' },
     { kind: 'file', path: '/a', url: '/a', name: 'a', ['content' + '_type']: 'application/pdf' },
-    { kind: 'folder', path: '/a', url: '/a', name: 'a' },
+    { kind: 'folder', id: '/a', url: '/a', name: 'a' },
   ])('rejects malformed or legacy value %#', (value) => {
     expect(toInputAssetValue(value)).toBeNull()
   })

@@ -26,6 +26,7 @@ import type {
   WebResourceUpdateOf,
 } from '../contracts'
 import { readFieldReference } from '../fields/defineFields'
+import { resolveFields } from '../fields/resolve'
 import { invalidateResourceData } from '../query/client'
 import { stableValue } from '../query/keys'
 import { useResourceRuntime } from './runtime'
@@ -311,6 +312,47 @@ function identityToken(id: RecordIdentity): string {
   return typeof id === 'object' ? JSON.stringify(stableValue(id)) : String(id)
 }
 
+type ResourceSurface = 'table' | 'detail' | 'form'
+
+function readResourceRecord<TRecord extends object>(
+  record: TRecord | undefined,
+  fields: FieldsInput<any, any> | undefined,
+  surface: ResourceSurface,
+  runtime: ReturnType<typeof useResourceRuntime>,
+): TRecord | undefined {
+  if (!record || !fields || !runtime.inputProps) return record
+  const surfaces = [...new Set<ResourceSurface>([surface, 'form', 'detail', 'table'])]
+  const renderers = new Map<string, string>()
+  for (const currentSurface of surfaces) {
+    const resolved = resolveFields({
+      fields,
+      surface: currentSurface,
+      defaults: runtime.fieldDefaults[currentSurface],
+      defaultFields: runtime.fieldDefaults.fields,
+    })
+    for (const field of resolved) {
+      if (field.renderer && !renderers.has(field.key)) renderers.set(field.key, field.renderer)
+    }
+  }
+  const next = { ...record } as Record<string, unknown>
+  for (const [key, renderer] of renderers) {
+    if (!Object.prototype.hasOwnProperty.call(next, key)) continue
+    next[key] = runtime.inputProps.read(renderer, next[key])
+  }
+  return next as TRecord
+}
+
+function readCollectionRecords<TRecord extends object>(
+  result: CollectionResult<TRecord>,
+  fields: FieldsInput<any, any> | undefined,
+  runtime: ReturnType<typeof useResourceRuntime>,
+): CollectionResult<TRecord> {
+  return {
+    ...result,
+    data: result.data.map((record) => readResourceRecord(record, fields, 'table', runtime) as TRecord),
+  }
+}
+
 function resolveIdentity<TRecord extends object, TIdentity extends RecordIdentity>(declaration: SchemaIdentityDeclaration<TRecord, TIdentity> | undefined): (record: TRecord) => TIdentity {
   if (typeof declaration === 'function') return declaration as (record: TRecord) => TIdentity
   if (Array.isArray(declaration)) {
@@ -417,7 +459,7 @@ export function defineActionResource<
       const detailTarget = detailDeclaration?.route ? (record: TRecord) => can('detail', record, detailDeclaration) ? routeFor(detailDeclaration.route, record) : undefined : undefined
       const updateTarget = updateDeclaration?.route ? (record: TRecord) => can('update', record, updateDeclaration) ? routeFor(updateDeclaration.route, record) : undefined : undefined
       return {
-        run: declaration.run,
+        run: async (context) => readCollectionRecords(await declaration.run(context), declaration.fields, runtime()),
         fields: listFields,
         namespace,
         searchParameters,
@@ -438,10 +480,16 @@ export function defineActionResource<
     detail: 'detail' in actions ? memoize((args: { id: TIdentity; searchParameters?: Record<string, unknown> }) => {
       const declaration = actions.detail as DetailResourceAction<TRecord, TIdentity>
       const searchParameters = args.searchParameters ?? {}
-      const run = async (context: LoadSignalContext = {}) => declaration.run({ id: args.id, searchParameters, ...context })
+      const detailFields = resolveFieldReferences(declaration.fields, schema, definition.key, 'detail') as FieldsInput<TRecord>
+      const run = async (context: LoadSignalContext = {}) => readResourceRecord(
+        await declaration.run({ id: args.id, searchParameters, ...context }),
+        detailFields,
+        'detail',
+        runtime(),
+      )
       return {
         run,
-        fields: resolveFieldReferences(declaration.fields, schema, definition.key, 'detail') as FieldsInput<TRecord>,
+        fields: detailFields,
         id: args.id,
         namespace: `${definition.key}.detail.${identityToken(args.id)}`,
         searchParameters,
@@ -451,14 +499,15 @@ export function defineActionResource<
       const declaration = actions.create as CreateResourceAction<TRecord, TCreate, TIdentity>
       const detailDeclaration = actions.detail as DetailResourceAction<TRecord, TIdentity> | undefined
       const defaultTo = formDefaultTo(declaration.defaultTo, detailDeclaration?.route, identity)
+      const createFields = resolveFieldReferences(declaration.fields, schema, definition.key, 'create') as FieldsInput<TCreate, TCreate>
       const run = async (input: TCreate) => {
         const result = await declaration.run(input)
         await invalidate()
-        return result
+        return readResourceRecord(result, createFields, 'form', runtime()) as TRecord
       }
       return {
         run,
-        fields: resolveFieldReferences(declaration.fields, schema, definition.key, 'create') as FieldsInput<TCreate, TCreate>,
+        fields: createFields,
         ...(schema.create?.schema ? { schema: schema.create.schema } : {}),
         ...(schema.create?.validators ? { validators: schema.create.validators } : {}),
         ...(args?.initialData ?? declaration.initialData ? { initialData: args?.initialData ?? declaration.initialData } : {}),
@@ -472,20 +521,21 @@ export function defineActionResource<
       const declaration = actions.update as UpdateResourceAction<TRecord, TUpdate, TIdentity>
       const detailDeclaration = actions.detail as DetailResourceAction<TRecord, TIdentity> | undefined
       const searchParameters = args.searchParameters ?? {}
+      const updateFields = resolveFieldReferences(declaration.fields, schema, definition.key, 'update') as FieldsInput<TUpdate, TUpdate>
       const run = async (input: TUpdate) => {
         const result = await declaration.run(args.id, input)
         await invalidate({ id: args.id })
-        return result
+        return readResourceRecord(result, updateFields, 'form', runtime()) as TRecord
       }
       const load = detailDeclaration ? async (context: RecordLoadContext<TIdentity>) => {
         const result = await detailDeclaration.run({ ...context, id: args.id, searchParameters })
-        return result as Partial<TUpdate> | undefined
+        return readResourceRecord(result, updateFields, 'form', runtime()) as Partial<TUpdate> | undefined
       } : undefined
       const defaultTo = formDefaultTo(declaration.defaultTo, detailDeclaration?.route, identity)
       return {
         run,
         ...(load ? { load } : {}),
-        fields: resolveFieldReferences(declaration.fields, schema, definition.key, 'update') as FieldsInput<TUpdate, TUpdate>,
+        fields: updateFields,
         id: args.id,
         ...(schema.update?.schema ? { schema: schema.update.schema } : {}),
         ...(schema.update?.validators ? { validators: schema.update.validators } : {}),

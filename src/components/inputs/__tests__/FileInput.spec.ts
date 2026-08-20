@@ -7,7 +7,7 @@ import { flush, mountCore } from '../../core/__tests__/harness'
 
 type Asset = {
   kind: 'file'
-  path: string
+  id: string
   url: string
   name: string
 }
@@ -15,7 +15,7 @@ type Asset = {
 function asset(name: string): Asset {
   return {
     kind: 'file',
-    path: `/uploads/${name}`,
+    id: `/uploads/${name}`,
     url: `https://files.test/${name}`,
     name,
   }
@@ -45,7 +45,7 @@ describe('FileInput upload surface', () => {
     view.unmount()
   })
 
-  it('keeps the uploaded row when the form writer stores its path', async () => {
+  it('keeps the uploaded row when the form writer stores its identity', async () => {
     const upload = vi.fn(async () => asset('first.pdf'))
     const model = ref<Record<string, unknown>>({ file: null })
     const host = defineComponent({
@@ -55,8 +55,8 @@ describe('FileInput upload surface', () => {
             label: 'File',
             form: { renderer: 'file', props: { upload } },
             write: (draft: Record<string, unknown>, value: unknown) => {
-              const file = value as { path?: unknown }
-              draft.file = typeof file?.path === 'string' ? file.path : value
+              const file = value as { id?: unknown }
+              draft.file = typeof file?.id === 'string' ? file.id : value
             },
           },
         },

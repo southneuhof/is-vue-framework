@@ -32,6 +32,13 @@ describe('FrameworkPlugin', () => {
     expect(useResourceRuntime().fieldDefaults)
       .toBe(second._context.provides[frameworkFieldDefaultsKey as symbol])
     expect(first._context.provides[inputPropsRegistryKey as symbol]).toBe(inputProps)
+
+    let inComponent: ReturnType<typeof useResourceRuntime> | undefined
+    const Probe = defineComponent({ setup() { inComponent = useResourceRuntime(); return () => h('div') } })
+    const probe = createApp(Probe).use(FrameworkPlugin, { inputProps })
+    probe.mount(document.createElement('div'))
+    expect(inComponent?.inputProps).toBe(inputProps)
+    probe.unmount()
   })
 
   it('rejects legacy options at compile time', () => {

@@ -1,6 +1,6 @@
 export interface InputAssetValue {
   kind: 'file'
-  path: string
+  id: string
   url: string
   name: string
   size?: number
@@ -12,9 +12,9 @@ export interface InputAssetValue {
 export function toInputAssetValue(input: unknown): InputAssetValue | null {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return null
   const value = input as Record<string, unknown>
-  const allowed = new Set(['kind', 'path', 'url', 'name', 'size', 'mimeType', 'updatedAt', 'metadata'])
+  const allowed = new Set(['kind', 'id', 'url', 'name', 'size', 'mimeType', 'updatedAt', 'metadata'])
   if (Object.keys(value).some((key) => !allowed.has(key))) return null
-  if (value.kind !== 'file' || typeof value.path !== 'string' || !value.path
+  if (value.kind !== 'file' || typeof value.id !== 'string' || !value.id
     || typeof value.url !== 'string' || !value.url || typeof value.name !== 'string' || !value.name) return null
   if (value.size !== undefined && (typeof value.size !== 'number' || !Number.isFinite(value.size))) return null
   if (value.mimeType !== undefined && typeof value.mimeType !== 'string') return null

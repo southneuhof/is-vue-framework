@@ -62,13 +62,25 @@ const fields = computed(() => {
 })
 const owner = ownerOf(props.namespace, 'form')
 
+function adaptValues(value: Record<string, unknown>, direction: 'read' | 'write') {
+  const result = { ...value }
+  for (const field of fields.value) {
+    if (!field.renderer || !Object.prototype.hasOwnProperty.call(result, field.key)) continue
+    result[field.key] = direction === 'read'
+      ? inputProps.read(field.renderer, result[field.key])
+      : inputProps.write(field.renderer, result[field.key])
+  }
+  return result
+}
+
 const loaded = useLoader<RecordLoadContext, Partial<Record<string, unknown>> | undefined>({
   key: computed(() => recordCacheKey(owner, undefined, props.searchParameters ?? {})),
   context: computed(() => ({ searchParameters: props.searchParameters ?? {} })),
   load: computed(() => (isModelBound ? undefined : props.load)),
 })
 
-const draft = reactive<Record<string, unknown>>({ ...(isModelBound ? props.modelValue : props.initialData ?? {}) })
+const startingValues = isModelBound ? props.modelValue ?? {} : props.initialData ?? {}
+const draft = reactive<Record<string, unknown>>(adaptValues(startingValues, 'read'))
 const edited = reactive(new Set<string>())
 const touched = reactive<Record<string, boolean>>({})
 const issues = ref<ValidationIssue[]>([])
@@ -76,8 +88,8 @@ const submitting = ref(false)
 const validating = ref(false)
 const validatingPaths = ref(new Set<string>())
 const submitAttempted = ref(false)
-const modelBaseline = ref<Record<string, unknown>>({ ...(props.modelValue ?? {}) })
-const initial = ref<Record<string, unknown>>({ ...(isModelBound ? props.modelValue : props.initialData ?? {}) })
+const modelBaseline = ref<Record<string, unknown>>(adaptValues(props.modelValue ?? {}, 'read'))
+const initial = ref<Record<string, unknown>>(adaptValues(isModelBound ? props.modelValue ?? {} : props.initialData ?? {}, 'read'))
 const lastEmittedModel = ref<Record<string, unknown>>()
 let validationController: AbortController | undefined
 let validationRun = 0
@@ -103,7 +115,7 @@ watch(
   () => props.modelValue,
   (value) => {
     if (!isModelBound) return
-    const next = { ...(value ?? {}) }
+    const next = adaptValues(value ?? {}, 'read')
     if (lastEmittedModel.value && shallowEqual(next, lastEmittedModel.value) && shallowEqual(next, draft)) return
     replaceDraft(next)
     modelBaseline.value = { ...next }
@@ -119,7 +131,7 @@ watch(
   () => loaded.data.value,
   (value) => {
     if (!value) return
-    for (const [key, next] of Object.entries(value)) {
+    for (const [key, next] of Object.entries(adaptValues(value, 'read'))) {
       if (edited.has(key)) continue
       draft[key] = next
       initial.value[key] = next
@@ -183,11 +195,14 @@ async function validate(trigger: FormValidationTrigger = 'submit', field?: strin
     if (path !== undefined) paths.add(String(path))
   }
   validatingPaths.value = paths
+  behavior.settle()
   const payload = behavior.visibleDraft.value as Record<string, unknown>
+  const validatedDraft = adaptValues(payload, 'write')
   try {
     const validation = await validateDraftAsync({
       schema: props.schema,
       draft: payload,
+      validatedDraft,
       hiddenKeys: hiddenKeys.value,
       validators: props.validators,
       trigger,

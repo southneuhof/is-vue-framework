@@ -3,6 +3,7 @@ import { defineComponent, h, ref } from 'vue'
 import { z } from 'zod'
 import Form from '../Form.vue'
 import { fromZod } from '../../../validation'
+import { createInputPropsRegistry } from '../../../renderers/inputProps'
 import { deferred, flush, mountCore } from './harness'
 
 const mocks = vi.hoisted(() => ({ toastError: vi.fn() }))
@@ -57,6 +58,35 @@ describe('Form core', () => {
     await flush()
 
     expect(submit).toHaveBeenCalledWith({ name: 'Admin' })
+    view.unmount()
+  })
+
+  it('keeps frontend asset values in the draft and writes them for the schema', async () => {
+    const canonical = { kind: 'file', id: 'uploads/a.pdf', url: 'https://files.test/a.pdf', name: 'a.pdf' }
+    const submit = vi.fn(async () => undefined)
+    const view = mountCore(Form, {
+      fields: { file: { label: 'File', form: { renderer: 'asset' } } },
+      initialData: { file: 'uploads/a.pdf' },
+      schema: fromZod(z.object({ file: z.string() })),
+      submit,
+    }, {
+      renderers: { form: { asset: defineComponent({ props: { value: { type: null } }, setup: () => () => h('div') }) } },
+      inputProps: createInputPropsRegistry({
+        asset: {
+          value: {
+            read: (value) => typeof value === 'string' ? canonical : value,
+            write: (value) => value && typeof value === 'object' && 'id' in value ? value.id : value,
+          },
+        },
+      }),
+    })
+    await flush()
+
+    expect(view.exposed().draft).toMatchObject({ file: canonical })
+    view.find('form')!.dispatchEvent(new Event('submit'))
+    await flush()
+
+    expect(submit).toHaveBeenCalledWith({ file: 'uploads/a.pdf' })
     view.unmount()
   })
 

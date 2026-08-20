@@ -15,11 +15,14 @@ import {
   resolveFrameworkFieldDefaults,
   type ResolvedFrameworkFieldDefaults,
 } from '../fields/defaults'
+import type { InputPropsRegistry } from '../renderers/inputProps'
+import { inputPropsRegistryKey } from '../renderers/inputProps'
 
 export interface ResourceRuntime {
   adapters: ResolvedFrameworkAdapters
   queryClient: QueryClient
   fieldDefaults: ResolvedFrameworkFieldDefaults
+  inputProps?: InputPropsRegistry
 }
 
 let installed: ResourceRuntime | undefined
@@ -37,7 +40,8 @@ export function useResourceRuntime(): ResourceRuntime {
     const adapters = inject(frameworkAdaptersKey, null)
     const queryClient = inject(frameworkQueryClientKey, null)
     const fieldDefaults = inject(frameworkFieldDefaultsKey, null)
-    if (adapters && queryClient && fieldDefaults) return { adapters, queryClient, fieldDefaults }
+    const inputProps = inject(inputPropsRegistryKey, null)
+    if (adapters && queryClient && fieldDefaults) return { adapters, queryClient, fieldDefaults, inputProps: inputProps ?? undefined }
   }
   if (installed) return installed
   return {
