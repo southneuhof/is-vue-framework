@@ -156,4 +156,63 @@ describe('action resources', () => {
     expect(list.updateRoute?.(record)).toBeUndefined()
     expect(list.canDelete).toBeUndefined()
   })
+
+  it('injects operation and declared permission into form field context', () => {
+    const value = resource()
+
+    expect(value.create().context).toEqual({ operation: 'create', permission: 'records.create' })
+    expect(value.update({ id: '1' }).context).toEqual({ operation: 'update', permission: 'records.update' })
+  })
+
+  it('keeps caller context keys and wins over reserved action keys', () => {
+    registerResourceRuntime({
+      queryClient: createFrameworkQueryClient(),
+      adapters: resolveFrameworkAdapters(),
+      fieldDefaults: resolveFrameworkFieldDefaults(),
+    })
+    const value = defineResource(schema, {
+      key: 'records-context',
+      actions: {
+        create: {
+          run: async (input) => ({ id: '2', ...input }),
+          fields: [fields.name],
+          permission: 'records.create',
+        },
+        update: {
+          run: async (id, input) => ({ id, name: input.name }),
+          fields: [fields.name],
+          permission: null,
+        },
+      },
+    })
+
+    expect(value.create({ context: { ticket: 't-1', operation: 'delete', permission: 'records.delete' } }).context).toEqual({
+      ticket: 't-1',
+      operation: 'create',
+      permission: 'records.create',
+    })
+    expect(value.update({ id: '1', context: { ticket: 't-2', permission: 'records.delete' } }).context).toEqual({
+      ticket: 't-2',
+      operation: 'update',
+      permission: null,
+    })
+  })
+
+  it('composes form context even when the caller supplies none', () => {
+    registerResourceRuntime({
+      queryClient: createFrameworkQueryClient(),
+      adapters: resolveFrameworkAdapters(),
+      fieldDefaults: resolveFrameworkFieldDefaults(),
+    })
+    const value = defineResource(schema, {
+      key: 'records-no-permission',
+      actions: {
+        create: { run: async (input) => ({ id: '2', ...input }), fields: [fields.name] },
+        update: { run: async (id, input) => ({ id, name: input.name }), fields: [fields.name] },
+      },
+    })
+
+    expect(value.create().context).toEqual({ operation: 'create', permission: null })
+    expect(value.update({ id: '1' }).context).toEqual({ operation: 'update', permission: null })
+  })
 })

@@ -90,6 +90,13 @@ Standard fields are schema-bound references. Define shared behavior once with
 terminal partial `.override({...})` handles one local difference. Custom
 actions contain only `run`.
 
+Standard create and update actions compose the existing field `context`: caller
+keys remain available, then the framework writes the reserved keys `operation`
+(`create` or `update`) and `permission` (the declared action permission or
+`null`). Caller values cannot override the reserved keys. Field behavior reads
+`context.permission` to scope relation lookups to the operation; a missing
+permission in a lookup behavior is a contract error, not a fallback.
+
 ## Core components
 
 `Table`, `Detail`, and `Form` are resource-agnostic. They accept native props
@@ -108,16 +115,20 @@ presentation is `table`, and its `custom` presentation receives loaded rows:
   :presentation="view === 'grid' ? 'custom' : 'table'"
   @update:query="query = $event"
 >
-  <template #custom="{ records, query, refresh, updateQuery }">
-    <RouteOwnedGrid :records="records" />
+  <template #custom="{ records, query, refresh, updateQuery, actions }">
+    <RouteOwnedGrid :records="records" :actions="actions" />
   </template>
 </ListView>
 ```
 
-The custom slot receives presentation-safe state and query actions. It does
-not receive a loader or a query client. Switching presentation keeps the same
-collection. Custom actions remain plain application functions; the route
-awaits its resource invalidation after a successful action.
+The custom slot receives presentation-safe state, query actions, and one
+`actions` object with the standard `createRoute`, `detailRoute`, `updateRoute`,
+`canDelete`, and `deleteRecord` callbacks from the same internal surface the
+table uses. A custom presentation does not rebuild route or delete permission
+checks, and it receives no loader or query client. Switching presentation keeps
+the same collection. Custom actions remain plain application functions; the
+route awaits its resource invalidation after a successful action. The API
+remains the final authorization boundary.
 
 `DialogForm` composes `Dialog` with core `Form`:
 

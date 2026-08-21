@@ -505,6 +505,11 @@ export function defineActionResource<
         await invalidate()
         return readResourceRecord(result, createFields, 'form', runtime()) as TRecord
       }
+      const context: FieldContext = {
+        ...(args?.context ?? {}),
+        operation: 'create',
+        permission: declaration.permission ?? null,
+      }
       return {
         run,
         fields: createFields,
@@ -513,7 +518,7 @@ export function defineActionResource<
         ...(args?.initialData ?? declaration.initialData ? { initialData: args?.initialData ?? declaration.initialData } : {}),
         searchParameters: args?.searchParameters ?? {},
         namespace: `${definition.key}.create`,
-        ...(args?.context ? { context: args.context } : {}),
+        context,
         ...(defaultTo ? { defaultTo } : {}),
       } as CreateResourceActionProps<TRecord, TCreate, TIdentity>
     }) : undefined,
@@ -532,6 +537,11 @@ export function defineActionResource<
         return readResourceRecord(result, updateFields, 'form', runtime()) as Partial<TUpdate> | undefined
       } : undefined
       const defaultTo = formDefaultTo(declaration.defaultTo, detailDeclaration?.route, identity)
+      const context: FieldContext = {
+        ...(args.context ?? {}),
+        operation: 'update',
+        permission: declaration.permission ?? null,
+      }
       return {
         run,
         ...(load ? { load } : {}),
@@ -542,7 +552,7 @@ export function defineActionResource<
         ...(args.initialData ? { initialData: args.initialData } : {}),
         searchParameters,
         namespace: `${definition.key}.update.${identityToken(args.id)}`,
-        ...(args.context ? { context: args.context } : {}),
+        context,
         ...(defaultTo ? { defaultTo } : {}),
       } as UpdateResourceActionProps<TRecord, TUpdate, TIdentity>
     }) : undefined,

@@ -45,6 +45,24 @@ export interface ListFilters<TQuery extends object = Record<string, unknown>> {
   resetLabel?: string;
 }
 
+/**
+ * Standard record actions forwarded to the custom presentation slot.
+ *
+ * The values come from the same internal surface the table row actions use;
+ * a custom presentation must not rebuild route or delete permission checks.
+ */
+export interface ListViewActions {
+  createRoute: import("vue-router").RouteLocationRaw | undefined;
+  detailRoute:
+    | ((record: Record<string, unknown>) => import("vue-router").RouteLocationRaw | undefined)
+    | undefined;
+  updateRoute:
+    | ((record: Record<string, unknown>) => import("vue-router").RouteLocationRaw | undefined)
+    | undefined;
+  canDelete: ((record: Record<string, unknown>) => boolean) | undefined;
+  deleteRecord: ((record: Record<string, unknown>) => Promise<unknown>) | undefined;
+}
+
 type ListViewProps = {
   title?: string;
   description?: string;
@@ -84,7 +102,7 @@ const emit = defineEmits<{
 const slots = useSlots();
 defineSlots<{
   [name: `cell:${string}`]: (props: { value: unknown; record: Record<string, unknown>; field: unknown; index: number }) => unknown;
-  custom?: (props: CollectionSlotProps<TRecord, TQuery>) => unknown;
+  custom?: (props: CollectionSlotProps<TRecord, TQuery> & { actions: ListViewActions }) => unknown;
   header?: () => unknown;
   controls?: () => unknown;
   filters?: () => unknown;
@@ -95,16 +113,7 @@ defineSlots<{
 
 type ListViewSurface = {
   table: TableProps<TRecord, TQuery>;
-  createRoute: import("vue-router").RouteLocationRaw | undefined;
-  detailRoute:
-    | ((record: Record<string, unknown>) => import("vue-router").RouteLocationRaw | undefined)
-    | undefined;
-  updateRoute:
-    | ((record: Record<string, unknown>) => import("vue-router").RouteLocationRaw | undefined)
-    | undefined;
-  canDelete: ((record: Record<string, unknown>) => boolean) | undefined;
-  deleteRecord: ((record: Record<string, unknown>) => Promise<unknown>) | undefined;
-};
+} & ListViewActions;
 
 const surface = computed<ListViewSurface>(() => {
   if ("run" in props && props.run) {
@@ -338,6 +347,14 @@ const canExport = computed(
     props.export !== false &&
     Boolean(surface.value.table.data || surface.value.table.load),
 );
+
+const customActions = computed<ListViewActions>(() => ({
+  createRoute: surface.value.createRoute,
+  detailRoute: surface.value.detailRoute,
+  updateRoute: surface.value.updateRoute,
+  canDelete: surface.value.canDelete,
+  deleteRecord: surface.value.deleteRecord,
+}));
 </script>
 
 <template>
@@ -592,7 +609,7 @@ const canExport = computed(
                 </template>
               </TableContent>
               <template v-else-if="$slots.custom">
-                <slot name="custom" v-bind="collection" />
+                <slot name="custom" v-bind="{ ...collection, actions: customActions }" />
               </template>
             </template>
           </Collection>

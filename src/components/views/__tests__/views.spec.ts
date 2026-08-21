@@ -248,6 +248,46 @@ describe('ListView', () => {
     view.unmount()
   })
 
+  it('forwards the standard action surface to the custom presentation', async () => {
+    let actions: Record<string, unknown> | undefined
+    let collectionKeys: string[] = []
+    const view = mountCore(
+      ListView,
+      {
+        presentation: 'custom',
+        run: () => ({ data: [{ id: '1', name: 'Admin' }], meta: { total: 1, totalPage: 1 } }),
+        fields: { name: { label: 'Name' } },
+        namespace: 'custom-actions',
+        createRoute: { name: 'test-route' },
+        detailRoute: (record) => ({ name: 'test-route', params: { id: String(record.id) } }),
+        updateRoute: (record) => ({ name: 'test-route', params: { id: String(record.id) } }),
+        canDelete: (record) => record.id === '1',
+        deleteRecord: async () => undefined,
+      },
+      {
+        slots: {
+          custom: (state) => {
+            actions = (state as { actions?: Record<string, unknown> }).actions
+            collectionKeys = Object.keys(state)
+            return h('p', 'custom')
+          },
+        },
+      },
+    )
+    await flush()
+
+    expect(actions?.createRoute).toEqual({ name: 'test-route' })
+    expect((actions!.detailRoute as (record: Record<string, unknown>) => unknown)({ id: '1' })).toEqual({ name: 'test-route', params: { id: '1' } })
+    expect((actions!.updateRoute as (record: Record<string, unknown>) => unknown)({ id: '1' })).toEqual({ name: 'test-route', params: { id: '1' } })
+    expect((actions!.canDelete as (record: Record<string, unknown>) => boolean)({ id: '1' })).toBe(true)
+    expect((actions!.canDelete as (record: Record<string, unknown>) => boolean)({ id: '2' })).toBe(false)
+    expect(typeof actions!.deleteRecord).toBe('function')
+    expect(collectionKeys).not.toContain('load')
+    expect(collectionKeys).not.toContain('data')
+    expect(Object.keys(actions!)).toEqual(['createRoute', 'detailRoute', 'updateRoute', 'canDelete', 'deleteRecord'])
+    view.unmount()
+  })
+
   it('rejects custom presentation without its slot', () => {
     expect(() => mountCore(ListView, { presentation: 'custom', table: tableProps })).toThrow(
       'ListView custom presentation requires a #custom slot.',
