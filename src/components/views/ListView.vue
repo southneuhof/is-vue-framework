@@ -59,7 +59,7 @@ export interface ListViewActions {
   updateRoute:
     | ((record: Record<string, unknown>) => import("vue-router").RouteLocationRaw | undefined)
     | undefined;
-  canDelete: ((record: Record<string, unknown>) => boolean) | undefined;
+  can?: ((operation: import("../../contracts").ResourceOperation, record?: Record<string, unknown>) => boolean) | undefined;
   deleteRecord: ((record: Record<string, unknown>) => Promise<unknown>) | undefined;
 }
 
@@ -86,7 +86,7 @@ type ListViewProps = {
       createRoute?: import("vue-router").RouteLocationRaw;
       detailRoute?: (record: TRecord) => import("vue-router").RouteLocationRaw | undefined;
       updateRoute?: (record: TRecord) => import("vue-router").RouteLocationRaw | undefined;
-      canDelete?: (record: TRecord) => boolean;
+      can?: (operation: import("../../contracts").ResourceOperation, record?: TRecord) => boolean;
       deleteRecord?: (record: TRecord) => Promise<unknown>;
       table?: never;
     }
@@ -132,7 +132,7 @@ const surface = computed<ListViewSurface>(() => {
       createRoute: props.createRoute,
       detailRoute: props.detailRoute,
       updateRoute: props.updateRoute,
-      canDelete: props.canDelete,
+      can: props.can,
       deleteRecord: props.deleteRecord as ((record: Record<string, unknown>) => Promise<unknown>) | undefined,
     } as ListViewSurface;
   }
@@ -144,7 +144,7 @@ const surface = computed<ListViewSurface>(() => {
     createRoute: undefined,
     detailRoute: undefined,
     updateRoute: undefined,
-    canDelete: undefined,
+    can: undefined,
     deleteRecord: undefined,
   };
 });
@@ -234,7 +234,7 @@ function setVisibleColumns(next: string[]) {
     slots["row-actions"] ||
     surface.value.detailRoute ||
     surface.value.updateRoute ||
-    surface.value.canDelete,
+    surface.value.can,
   );
   if (!hasActions && normalized.length === 0 && columnKeys.value.length) return;
   columnPreferences.setVisible(normalized);
@@ -345,7 +345,7 @@ const customActions = computed<ListViewActions>(() => ({
   createRoute: surface.value.createRoute,
   detailRoute: surface.value.detailRoute,
   updateRoute: surface.value.updateRoute,
-  canDelete: surface.value.canDelete,
+  can: surface.value.can,
   deleteRecord: surface.value.deleteRecord,
 }));
 </script>
@@ -519,7 +519,7 @@ const customActions = computed<ListViewActions>(() => ({
                     $slots['row-actions'] ||
                     surface.detailRoute ||
                     surface.updateRoute ||
-                    surface.canDelete
+                    surface.can
                   "
                   #row-actions="{ record }"
                 >
@@ -559,7 +559,7 @@ const customActions = computed<ListViewActions>(() => ({
                         <template #icon><Icon name="edit" size="base" /></template>
                       </Button>
                     </RouterLink>
-                    <Dialog v-if="surface.canDelete?.(record)">
+                    <Dialog v-if="surface.can?.('delete', record)">
                       <template #trigger>
                         <Button
                           kind="icon"

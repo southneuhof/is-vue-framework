@@ -259,7 +259,7 @@ describe('ListView', () => {
         createRoute: { name: 'test-route' },
         detailRoute: (record) => ({ name: 'test-route', params: { id: String(record.id) } }),
         updateRoute: (record) => ({ name: 'test-route', params: { id: String(record.id) } }),
-        canDelete: (record) => record.id === '1',
+        can: (operation, record) => operation === 'delete' && record?.id === '1',
         deleteRecord: async () => undefined,
       },
       {
@@ -277,12 +277,12 @@ describe('ListView', () => {
     expect(actions?.createRoute).toEqual({ name: 'test-route' })
     expect((actions!.detailRoute as (record: Record<string, unknown>) => unknown)({ id: '1' })).toEqual({ name: 'test-route', params: { id: '1' } })
     expect((actions!.updateRoute as (record: Record<string, unknown>) => unknown)({ id: '1' })).toEqual({ name: 'test-route', params: { id: '1' } })
-    expect((actions!.canDelete as (record: Record<string, unknown>) => boolean)({ id: '1' })).toBe(true)
-    expect((actions!.canDelete as (record: Record<string, unknown>) => boolean)({ id: '2' })).toBe(false)
+    expect((actions!.can as (operation: string, record?: Record<string, unknown>) => boolean)('delete', { id: '1' })).toBe(true)
+    expect((actions!.can as (operation: string, record?: Record<string, unknown>) => boolean)('delete', { id: '2' })).toBe(false)
     expect(typeof actions!.deleteRecord).toBe('function')
     expect(collectionKeys).not.toContain('load')
     expect(collectionKeys).not.toContain('data')
-    expect(Object.keys(actions!)).toEqual(['createRoute', 'detailRoute', 'updateRoute', 'canDelete', 'deleteRecord'])
+    expect(Object.keys(actions!)).toEqual(['createRoute', 'detailRoute', 'updateRoute', 'can', 'deleteRecord'])
     view.unmount()
   })
 

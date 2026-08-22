@@ -187,7 +187,7 @@ export interface ListResourceActionProps<
   createRoute?: RouteLocationRaw
   detailRoute?: (record: TRecord) => RouteLocationRaw | undefined
   updateRoute?: (record: TRecord) => RouteLocationRaw | undefined
-  canDelete?: (record: TRecord) => boolean
+  can?: (operation: ResourceOperation, record?: TRecord) => boolean
   deleteRecord?: (record: TRecord) => Promise<unknown>
   /** Route used by the shell after a successful form submission. */
   detailTarget?: (record: TRecord) => RouteLocationRaw | undefined
@@ -204,6 +204,7 @@ export interface DetailResourceActionProps<TRecord extends object, TIdentity ext
   title?: string
   /** Sibling list location for the detail shell's back control. */
   backTo?: RouteLocationRaw
+  can?: (operation: ResourceOperation, record?: TRecord) => boolean
 }
 
 export interface CreateResourceActionProps<TRecord extends object, TCreate extends object, TIdentity extends RecordIdentity> {
@@ -409,6 +410,23 @@ function permissionAllows(
   return (permission === null || access.allows({ operation, permission, record })) && (!declaration.visible || declaration.visible({ record, access }))
 }
 
+/**
+ * Answers one operation check through the access seam. A declared action gates
+ * with its own permission and visibility; an undeclared operation is asked
+ * directly so custom-action surfaces can query records without a standard
+ * declaration.
+ */
+function operationAllowed(
+  actions: Record<string, unknown>,
+  access: AccessAdapter,
+  operation: ResourceOperation,
+  record?: Record<string, unknown>,
+): boolean {
+  const declaration = actions[operation] as ActionVisibility & { permission?: string | null } | undefined
+  if (!declaration) return access.allows({ operation, record })
+  return permissionAllows(operation, declaration, access, record)
+}
+
 export function defineActionResource<
   const TSchema extends WebResourceSchemaBoundary,
   const TActions extends ResourceActionDefinitions<
@@ -482,7 +500,8 @@ export function defineActionResource<
         ...(actions.create && permissionAllows('create', actions.create, access) && actions.create.route ? { createRoute: toRoute(actions.create.route) } : {}),
         ...(detailTarget ? { detailRoute: detailTarget } : {}),
         ...(updateTarget ? { updateRoute: updateTarget } : {}),
-        ...(deleteRecord ? { canDelete: (record: TRecord) => permissionAllows('delete', deleteDeclaration!, access, record as Record<string, unknown>), deleteRecord } : {}),
+        ...(deleteRecord ? { deleteRecord } : {}),
+        can: (operation: ResourceOperation, record?: TRecord) => operationAllowed(actions as Record<string, unknown>, access, operation, record as Record<string, unknown> | undefined),
         ...(detailTarget ? { detailTarget } : {}),
       } as ListResourceActionProps<TRecord, TQuery, TIdentity>
     }) : undefined,
@@ -512,6 +531,8 @@ export function defineActionResource<
         searchParameters,
         ...(declaration.backTo ? { backTo: declaration.backTo } : inferredBackTo ? { backTo: inferredBackTo } : {}),
         ...(declaration.title === undefined ? {} : { title: declaration.title }),
+        can: (operation: ResourceOperation, record?: TRecord) =>
+          operationAllowed(actions as Record<string, unknown>, runtime().adapters.access, operation, record as Record<string, unknown> | undefined),
       } as DetailResourceActionProps<TRecord, TIdentity>
     }) : undefined,
     create: 'create' in actions ? memoize((args: CreateResourceActionArguments<TCreate> | undefined) => {

@@ -22,7 +22,7 @@ const table = {
       <RouterLink v-if="actions.createRoute" :to="actions.createRoute">Create</RouterLink>
       <button type="button" @click="actions.detailRoute?.(records[0]!)">View</button>
       <button type="button" @click="actions.updateRoute?.(records[0]!)">Edit</button>
-      <span v-if="actions.canDelete?.(records[0]!)" @click="actions.deleteRecord?.(records[0]!)">Delete</span>
+      <span v-if="actions.can?.('delete', records[0]!)" @click="actions.deleteRecord?.(records[0]!)">Delete</span>
     </template>
   </ListView>
 </template>

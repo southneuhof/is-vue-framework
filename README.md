@@ -124,7 +124,7 @@ body to a loaded collection:
 The collection slot receives presentation-safe state, query
 actions, and one
 `actions` object with the standard `createRoute`, `detailRoute`, `updateRoute`,
-`canDelete`, and `deleteRecord` callbacks from the same internal surface the
+`can(operation, record)`, and `deleteRecord` callbacks from the same internal surface the
 table uses. A collection presentation does not rebuild route or delete permission
 checks, and it receives no loader or query client. Toggling the slot keeps
 the same collection. Custom actions remain plain application functions; the

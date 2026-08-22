@@ -111,7 +111,8 @@ describe('action resources', () => {
     expect(list.createRoute).toEqual({ name: 'records-create' })
     expect(list.detailRoute?.(record)).toEqual({ name: 'records-detail', params: { id: '1' } })
     expect(list.updateRoute?.(record)).toEqual({ name: 'records-edit', params: { id: '1' } })
-    expect(list.canDelete?.(record)).toBe(true)
+    expect(list.can?.('delete', record)).toBe(true)
+    expect(list.can?.('update', record)).toBe(true)
     const detail = value.detail({ id: '1' })
     expect(detail.title).toBe('Detail Record')
     expect(detail.backTo).toEqual({ name: 'records-list' })
@@ -201,7 +202,49 @@ describe('action resources', () => {
     expect(list.createRoute).toBeUndefined()
     expect(list.detailRoute?.(record)).toBeUndefined()
     expect(list.updateRoute?.(record)).toBeUndefined()
-    expect(list.canDelete).toBeUndefined()
+    expect(list.can?.('create')).toBe(false)
+  })
+
+  it('answers undeclared operations through access on list and detail bags', () => {
+    const asked: { operation: string; permission: string | null; record?: unknown }[] = []
+    registerResourceRuntime({
+      queryClient: createFrameworkQueryClient(),
+      adapters: resolveFrameworkAdapters({
+        access: {
+          allows: ({ operation, permission, record }) => {
+            asked.push({ operation, permission: permission ?? null, record })
+            return Array.isArray((record as { allowedOperations?: string[] } | undefined)?.allowedOperations)
+              ? (record as { allowedOperations: string[] }).allowedOperations.includes(operation)
+              : false
+          },
+        },
+      }),
+      fieldDefaults: resolveFrameworkFieldDefaults(),
+    })
+    const value = defineResource(schema, {
+      key: 'records-bare',
+      actions: {
+        list: {
+          run: async (): Promise<CollectionResult<Row>> => ({ data: [] }),
+          fields: [fields.name],
+          route: { name: 'records-list' },
+        },
+        detail: {
+          run: async ({ id }) => ({ id, name: 'One' }),
+          fields: [fields.name],
+          route: { name: 'records-detail', params: (id) => ({ id }) },
+        },
+      },
+    })
+
+    const record = { id: '1', name: 'One', allowedOperations: ['update', 'delete'] }
+    expect(value.list().can?.('delete', record)).toBe(true)
+    expect(value.list().can?.('update', { id: '2', name: 'Two' })).toBe(false)
+    expect(value.list().can?.('delete', { id: '2', name: 'Two' })).toBe(false)
+    const detail = value.detail({ id: '1' })
+    expect(typeof detail.can).toBe('function')
+    expect(detail.can?.('delete', record)).toBe(true)
+    expect(asked.every((call) => call.permission === null)).toBe(true)
   })
 
   it('injects operation and declared permission into form field context', () => {
