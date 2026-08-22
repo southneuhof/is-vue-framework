@@ -489,6 +489,13 @@ export function defineActionResource<
     detail: 'detail' in actions ? memoize((args: { id: TIdentity; searchParameters?: Record<string, unknown> }) => {
       const declaration = actions.detail as DetailResourceAction<TRecord, TIdentity>
       const listDeclaration = actions.list as ListResourceAction<TRecord, TQuery, TIdentity> | undefined
+      // A declared backTo wins; otherwise the sibling list route is used in
+      // full so closure-bound params (nested factories) survive. Function
+      // params take the record id and would be wrong for a back target, so
+      // they degrade to name-only.
+      const listRoute = listDeclaration?.route
+      const inferredBackTo =
+        !listRoute ? undefined : typeof listRoute.params === 'function' ? { name: listRoute.name } : toRoute(listRoute)
       const searchParameters = args.searchParameters ?? {}
       const detailFields = resolveFieldReferences(declaration.fields, schema, definition.key, 'detail') as FieldsInput<TRecord>
       const run = async (context: LoadSignalContext = {}) => readResourceRecord(
@@ -503,7 +510,7 @@ export function defineActionResource<
         id: args.id,
         namespace: `${definition.key}.detail.${identityToken(args.id)}`,
         searchParameters,
-        ...(declaration.backTo ? { backTo: declaration.backTo } : listDeclaration?.route ? { backTo: { name: listDeclaration.route.name } } : {}),
+        ...(declaration.backTo ? { backTo: declaration.backTo } : inferredBackTo ? { backTo: inferredBackTo } : {}),
         ...(declaration.title === undefined ? {} : { title: declaration.title }),
       } as DetailResourceActionProps<TRecord, TIdentity>
     }) : undefined,

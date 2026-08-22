@@ -173,6 +173,26 @@ describe('action resources', () => {
     expect(value.detail({ id: '1' }).title).toBe('Custom Detail')
   })
 
+  it('infers detail backTo from a parameterized sibling list route', () => {
+    registerResourceRuntime({
+      queryClient: createFrameworkQueryClient(),
+      adapters: resolveFrameworkAdapters(),
+      fieldDefaults: resolveFrameworkFieldDefaults(),
+    })
+    const value = defineResource(schema, {
+      key: 'records-nested',
+      actions: {
+        list: { run: async () => ({ data: [] }), route: { name: 'parent-tab', params: { parentId: 'p1' } } },
+        detail: {
+          run: async ({ id }) => ({ id, name: 'One' }),
+          route: { name: 'parent-tab-detail', params: (id) => ({ parentId: 'p1', id: String(id) }) },
+        },
+      },
+    })
+
+    expect(value.detail({ id: '1' }).backTo).toEqual({ name: 'parent-tab', params: { parentId: 'p1' } })
+  })
+
   it('filters standard routes and row actions through access', () => {
     const value = resource({ allows: ({ operation }: { operation: string }) => operation === 'list' })
     const list = value.list()
