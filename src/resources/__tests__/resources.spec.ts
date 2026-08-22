@@ -150,6 +150,29 @@ describe('action resources', () => {
     expect(value.update({ id: '1' }).defaultTo).toBeUndefined()
   })
 
+  it('prefers a declared detail backTo over the inferred list route', () => {
+    registerResourceRuntime({
+      queryClient: createFrameworkQueryClient(),
+      adapters: resolveFrameworkAdapters(),
+      fieldDefaults: resolveFrameworkFieldDefaults(),
+    })
+    const value = defineResource(schema, {
+      key: 'records-backto',
+      actions: {
+        list: { run: async () => ({ data: [] }), route: { name: 'records-list' } },
+        detail: {
+          run: async ({ id }) => ({ id, name: 'One' }),
+          route: { name: 'records-detail', params: (id) => ({ id }) },
+          title: 'Custom Detail',
+          backTo: { name: 'parent-tab' },
+        },
+      },
+    })
+
+    expect(value.detail({ id: '1' }).backTo).toEqual({ name: 'parent-tab' })
+    expect(value.detail({ id: '1' }).title).toBe('Custom Detail')
+  })
+
   it('filters standard routes and row actions through access', () => {
     const value = resource({ allows: ({ operation }: { operation: string }) => operation === 'list' })
     const list = value.list()

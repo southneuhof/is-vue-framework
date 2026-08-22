@@ -102,6 +102,8 @@ export interface DetailResourceAction<
   permission?: string | null
   route?: ResourceActionRoute<TIdentity>
   title?: string
+  /** Explicit back target; wins over the inferred sibling list route. */
+  backTo?: RouteLocationRaw
 }
 
 export interface CreateResourceAction<
@@ -501,7 +503,7 @@ export function defineActionResource<
         id: args.id,
         namespace: `${definition.key}.detail.${identityToken(args.id)}`,
         searchParameters,
-        ...(listDeclaration?.route ? { backTo: { name: listDeclaration.route.name } } : {}),
+        ...(declaration.backTo ? { backTo: declaration.backTo } : listDeclaration?.route ? { backTo: { name: listDeclaration.route.name } } : {}),
         ...(declaration.title === undefined ? {} : { title: declaration.title }),
       } as DetailResourceActionProps<TRecord, TIdentity>
     }) : undefined,
