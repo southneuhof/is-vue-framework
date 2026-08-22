@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { createApp, defineComponent, h } from 'vue'
+import { createApp, defineComponent, h, ref } from 'vue'
 import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import { FrameworkPlugin } from '../../../adapters/plugin'
 import ListView from '../ListView.vue'
@@ -214,13 +214,12 @@ describe('ListView', () => {
     view.unmount()
   })
 
-  it('passes the loaded collection to the custom presentation without a second loader', async () => {
+  it('passes the loaded collection to the collection slot without a second loader', async () => {
     let calls = 0
     let slotState: Record<string, unknown> | undefined
     const view = mountCore(
       ListView,
       {
-        presentation: 'custom',
         table: {
           namespace: 'custom-list',
           fields: { name: { label: 'Name' } },
@@ -232,7 +231,7 @@ describe('ListView', () => {
       },
       {
         slots: {
-          custom: (state) => {
+          collection: (state) => {
             slotState = state
             return h('p', { class: 'custom-record' }, String((state.records as Array<{ name: string }>)[0]?.name))
           },
@@ -248,13 +247,12 @@ describe('ListView', () => {
     view.unmount()
   })
 
-  it('forwards the standard action surface to the custom presentation', async () => {
+  it('forwards the standard action surface to the collection slot', async () => {
     let actions: Record<string, unknown> | undefined
     let collectionKeys: string[] = []
     const view = mountCore(
       ListView,
       {
-        presentation: 'custom',
         run: () => ({ data: [{ id: '1', name: 'Admin' }], meta: { total: 1, totalPage: 1 } }),
         fields: { name: { label: 'Name' } },
         namespace: 'custom-actions',
@@ -266,7 +264,7 @@ describe('ListView', () => {
       },
       {
         slots: {
-          custom: (state) => {
+          collection: (state) => {
             actions = (state as { actions?: Record<string, unknown> }).actions
             collectionKeys = Object.keys(state)
             return h('p', 'custom')
@@ -288,10 +286,39 @@ describe('ListView', () => {
     view.unmount()
   })
 
-  it('rejects custom presentation without its slot', () => {
-    expect(() => mountCore(ListView, { presentation: 'custom', table: tableProps })).toThrow(
-      'ListView custom presentation requires a #custom slot.',
-    )
+  it('renders the table by default and flips live when a conditional collection slot toggles', async () => {
+    const ToggleHost = defineComponent({
+      setup() {
+        const grid = ref(false)
+        return () => [
+          h('button', { 'data-toggle': '', onClick: () => { grid.value = !grid.value } }, 'toggle'),
+          h(ListView, {
+            table: {
+              namespace: 'slot-toggle-live',
+              fields: { name: { label: 'Nama' } },
+              data: [{ name: 'Admin' }],
+            },
+          }, grid.value
+            ? { collection: () => [h('p', { class: 'collection-body' }, 'grid body')] }
+            : {}),
+        ]
+      },
+    })
+    const view = mountCore(ToggleHost, {})
+    await flush()
+    expect(view.find('table')).not.toBeNull()
+    expect(view.find('.collection-body')).toBeNull()
+
+    view.find<HTMLButtonElement>('[data-toggle]')!.click()
+    await flush()
+    expect(view.find('.collection-body')?.textContent).toBe('grid body')
+    expect(view.find('table')).toBeNull()
+
+    view.find<HTMLButtonElement>('[data-toggle]')!.click()
+    await flush()
+    expect(view.find('table')).not.toBeNull()
+    expect(view.find('.collection-body')).toBeNull()
+    view.unmount()
   })
 
   it('sends debounced search through the table query and resets page', async () => {

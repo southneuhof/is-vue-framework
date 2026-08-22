@@ -12,8 +12,8 @@ const table = {
 </script>
 
 <template>
-  <ListView v-bind="table" presentation="custom">
-    <template #custom="{ records, query, meta, loading, error, empty, refresh, updateQuery, actions }">
+  <ListView v-bind="table">
+    <template #collection="{ records, query, meta, loading, error, empty, refresh, updateQuery, actions }">
       <span>{{ records[0]?.name }}</span>
       <span>{{ query.state }}</span>
       <span>{{ meta?.total }} {{ loading }} {{ error?.message }} {{ empty }}</span>

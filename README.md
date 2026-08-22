@@ -105,27 +105,28 @@ and can be used directly for custom screens. `ListView`, `DetailView`, and
 
 `Collection` owns one collection loader, query, cache identity, metadata,
 loading, error, empty, and refresh state. `Table` composes `Collection` with
-the table presentation. `ListView` also uses one `Collection`; its default
-presentation is `table`, and its `custom` presentation receives loaded rows:
+the table presentation. `ListView` also uses one `Collection`; without a
+`#collection` slot it renders the table, and the slot's presence switches the
+body to a loaded collection:
 
 ```vue
 <ListView
   v-bind="resource.list()"
   :query="query"
-  :presentation="view === 'grid' ? 'custom' : 'table'"
   @update:query="query = $event"
 >
-  <template #custom="{ records, query, refresh, updateQuery, actions }">
-    <RouteOwnedGrid :records="records" :actions="actions" />
+  <template #collection="{ records }" v-if="view === 'grid'">
+    <RouteOwnedGrid :records="records" />
   </template>
 </ListView>
 ```
 
-The custom slot receives presentation-safe state, query actions, and one
+The collection slot receives presentation-safe state, query
+actions, and one
 `actions` object with the standard `createRoute`, `detailRoute`, `updateRoute`,
 `canDelete`, and `deleteRecord` callbacks from the same internal surface the
-table uses. A custom presentation does not rebuild route or delete permission
-checks, and it receives no loader or query client. Switching presentation keeps
+table uses. A collection presentation does not rebuild route or delete permission
+checks, and it receives no loader or query client. Toggling the slot keeps
 the same collection. Custom actions remain plain application functions; the
 route awaits its resource invalidation after a successful action. The API
 remains the final authorization boundary.

@@ -46,10 +46,10 @@ export interface ListFilters<TQuery extends object = Record<string, unknown>> {
 }
 
 /**
- * Standard record actions forwarded to the custom presentation slot.
+ * Standard record actions forwarded to the collection presentation slot.
  *
  * The values come from the same internal surface the table row actions use;
- * a custom presentation must not rebuild route or delete permission checks.
+ * a collection presentation must not rebuild route or delete permission checks.
  */
 export interface ListViewActions {
   createRoute: import("vue-router").RouteLocationRaw | undefined;
@@ -66,7 +66,6 @@ export interface ListViewActions {
 type ListViewProps = {
   title?: string;
   description?: string;
-  presentation?: "table" | "custom";
   /** Controlled user collection state. Search/filter values belong here. */
   query?: QueryValues;
   /** Explicit query fields for live filtering; record fields are never inferred. */
@@ -102,7 +101,7 @@ const emit = defineEmits<{
 const slots = useSlots();
 defineSlots<{
   [name: `cell:${string}`]: (props: { value: unknown; record: Record<string, unknown>; field: unknown; index: number }) => unknown;
-  custom?: (props: CollectionSlotProps<TRecord, TQuery> & { actions: ListViewActions }) => unknown;
+  collection?: (props: CollectionSlotProps<TRecord, TQuery> & { actions: ListViewActions }) => unknown;
   header?: () => unknown;
   controls?: () => unknown;
   filters?: () => unknown;
@@ -151,12 +150,6 @@ const surface = computed<ListViewSurface>(() => {
 });
 
 const hasQueryBinding = "query" in (getCurrentInstance()?.vnode.props ?? {});
-const presentation = computed(() => props.presentation ?? "table");
-watch(presentation, (value) => {
-  if (value === "custom" && !slots.custom) {
-    throw new Error("[is-vue-framework] ListView custom presentation requires a #custom slot.");
-  }
-}, { immediate: true });
 const queryDefaults = computed<QueryValues>(() => ({
   page: 1,
   limit: 10,
@@ -210,7 +203,7 @@ const passthroughSlots = computed(() =>
         "controls",
         "filters",
         "body",
-        "custom",
+        "collection",
         "footer",
         "row-actions",
       ].includes(name),
@@ -497,8 +490,8 @@ const customActions = computed<ListViewActions>(() => ({
             @update:query="updateQuery"
           >
             <template #default="collection">
-             <TableContent
-                 v-if="presentation === 'table'"
+              <TableContent
+                 v-if="!$slots.collection"
                 :fields="surface.table.fields"
                 :records="collection.records"
                 :meta="collection.meta"
@@ -608,8 +601,8 @@ const customActions = computed<ListViewActions>(() => ({
                   <slot :name="name" v-bind="slotProps ?? {}" />
                 </template>
               </TableContent>
-              <template v-else-if="$slots.custom">
-                <slot name="custom" v-bind="{ ...collection, actions: customActions }" />
+              <template v-else>
+                <slot name="collection" v-bind="{ ...collection, actions: customActions }" />
               </template>
             </template>
           </Collection>
