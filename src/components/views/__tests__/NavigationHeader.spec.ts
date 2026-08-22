@@ -6,8 +6,9 @@ import NavigationHeader from '../NavigationHeader.vue'
 async function mountHeader(
   props: Record<string, unknown> = {},
   slots: Record<string, () => ReturnType<typeof h>> = {},
+  options: { uiDefaults?: { backLabel?: string } } = {},
 ) {
-  const view = mountCore(NavigationHeader, props, { slots })
+  const view = mountCore(NavigationHeader, props, { slots, uiDefaults: options.uiDefaults })
   await flush()
   return { router: view.router, view }
 }
@@ -48,5 +49,20 @@ describe('NavigationHeader', () => {
     expect(go).toHaveBeenCalledWith(-1)
     go.mockRestore()
     view.unmount()
+  })
+
+  it('resolves the back label as prop, then app default, then "Back"', async () => {
+    const injected = await mountHeader({}, {}, { uiDefaults: { backLabel: 'Kembali' } })
+    expect(injected.view.find('button[aria-label="Kembali"]')).not.toBeNull()
+    injected.view.unmount()
+
+    const propWins = await mountHeader({ backLabel: 'Terug' }, {}, { uiDefaults: { backLabel: 'Kembali' } })
+    expect(propWins.view.find('button[aria-label="Terug"]')).not.toBeNull()
+    expect(propWins.view.find('button[aria-label="Kembali"]')).toBeNull()
+    propWins.view.unmount()
+
+    const plain = await mountHeader()
+    expect(plain.view.find('button[aria-label="Back"]')).not.toBeNull()
+    plain.view.unmount()
   })
 })

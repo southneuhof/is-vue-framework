@@ -84,6 +84,7 @@ export interface ListResourceAction<
   fields?: FieldReferenceList<TSchema, TRecord, 'table'>
   permission?: string | null
   route?: ResourceActionRoute<TIdentity>
+  title?: string
   pagination?: TableProps<TRecord, TQuery>['pagination']
   pageSizeOptions?: readonly number[]
   defaultPageSize?: number
@@ -100,6 +101,7 @@ export interface DetailResourceAction<
   fields?: FieldReferenceList<TSchema, TRecord, 'detail'>
   permission?: string | null
   route?: ResourceActionRoute<TIdentity>
+  title?: string
 }
 
 export interface CreateResourceAction<
@@ -126,6 +128,7 @@ export interface UpdateResourceAction<
   fields?: FieldReferenceList<TSchema, TUpdate, 'form'>
   permission?: string | null
   route?: ResourceActionRoute<TIdentity>
+  title?: string
   defaultTo?: ResourceFormDefaultTo<TRecord>
 }
 
@@ -195,6 +198,10 @@ export interface DetailResourceActionProps<TRecord extends object, TIdentity ext
   namespace: QueryNamespace
   searchParameters: Record<string, unknown>
   detailTarget?: RouteLocationRaw
+  /** Page heading for the detail shell when the route passes no explicit title. */
+  title?: string
+  /** Sibling list location for the detail shell's back control. */
+  backTo?: RouteLocationRaw
 }
 
 export interface CreateResourceActionProps<TRecord extends object, TCreate extends object, TIdentity extends RecordIdentity> {
@@ -479,6 +486,7 @@ export function defineActionResource<
     }) : undefined,
     detail: 'detail' in actions ? memoize((args: { id: TIdentity; searchParameters?: Record<string, unknown> }) => {
       const declaration = actions.detail as DetailResourceAction<TRecord, TIdentity>
+      const listDeclaration = actions.list as ListResourceAction<TRecord, TQuery, TIdentity> | undefined
       const searchParameters = args.searchParameters ?? {}
       const detailFields = resolveFieldReferences(declaration.fields, schema, definition.key, 'detail') as FieldsInput<TRecord>
       const run = async (context: LoadSignalContext = {}) => readResourceRecord(
@@ -493,6 +501,8 @@ export function defineActionResource<
         id: args.id,
         namespace: `${definition.key}.detail.${identityToken(args.id)}`,
         searchParameters,
+        ...(listDeclaration?.route ? { backTo: { name: listDeclaration.route.name } } : {}),
+        ...(declaration.title === undefined ? {} : { title: declaration.title }),
       } as DetailResourceActionProps<TRecord, TIdentity>
     }) : undefined,
     create: 'create' in actions ? memoize((args: CreateResourceActionArguments<TCreate> | undefined) => {

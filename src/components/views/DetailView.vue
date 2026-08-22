@@ -50,7 +50,7 @@ const surface = computed(() => {
 
 <template>
   <section class="is-detail-view flex flex-col gap-2">
-    <NavigationHeader :title="title ?? ''" :back-to="backTo ?? { name: 'dashboard' }" back-label="Kembali">
+    <NavigationHeader :title="title ?? ''" :back-to="backTo ?? { name: 'dashboard' }">
       <template v-if="$slots.controls" #controls><slot name="controls" /></template>
     </NavigationHeader>
 

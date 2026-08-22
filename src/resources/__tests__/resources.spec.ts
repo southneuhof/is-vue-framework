@@ -48,6 +48,7 @@ function resource(access = { allows: () => true }) {
         fields: [fields.name],
         permission: 'records.detail',
         route: { name: 'records-detail', params: (id) => ({ id }) },
+        title: 'Detail Record',
       },
       create: {
         run: async (input) => ({ id: '2', ...input }),
@@ -111,6 +112,9 @@ describe('action resources', () => {
     expect(list.detailRoute?.(record)).toEqual({ name: 'records-detail', params: { id: '1' } })
     expect(list.updateRoute?.(record)).toEqual({ name: 'records-edit', params: { id: '1' } })
     expect(list.canDelete?.(record)).toBe(true)
+    const detail = value.detail({ id: '1' })
+    expect(detail.title).toBe('Detail Record')
+    expect(detail.backTo).toEqual({ name: 'records-list' })
     await expect(value.actions.verify.run('1', 'approved')).resolves.toBe('1:approved')
     await expect(value.create().run({ name: 'Two' })).resolves.toEqual({ id: '2', name: 'Two' })
     expect(value.create().defaultTo?.({ id: '2', name: 'Two' })).toEqual({ name: 'records-detail', params: { id: '2' } })

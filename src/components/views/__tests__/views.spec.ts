@@ -364,6 +364,7 @@ describe('DetailView', () => {
 
   it('renders required navigation chrome and controls without a footer', async () => {
     const view = mountCore(DetailView, { title: 'Role', backTo: { name: 'test-route' }, detail: detailProps }, {
+      uiDefaults: { backLabel: 'Kembali' },
       slots: {
         controls: () => h('button', { 'data-controls-slot': '' }, 'Ubah'),
       },
@@ -378,6 +379,21 @@ describe('DetailView', () => {
     expect(view.find('[data-controls-slot]')).not.toBeNull()
     expect(view.find('header > div [data-controls-slot]')).not.toBeNull()
     expect(view.find('footer')).toBeNull()
+    view.unmount()
+  })
+
+  it('resolves header title and back target from the action bag when no explicit prop is set', async () => {
+    const view = mountCore(DetailView, {
+      run: async () => ({ name: 'Admin' }),
+      fields: { name: { label: 'Nama' } },
+      id: '1',
+      title: 'Detail Role',
+      backTo: { name: 'test-route' },
+    }, { uiDefaults: { backLabel: 'Kembali' } })
+    await flush()
+
+    expect(view.find('h1')?.textContent).toBe('Detail Role')
+    expect(view.find<HTMLAnchorElement>('a[aria-label="Kembali"]')).not.toBeNull()
     view.unmount()
   })
 

@@ -6,6 +6,7 @@ import { frameworkAdaptersKey } from '../projectAdapters'
 import { frameworkQueryClientKey } from '../../query'
 import { rendererRegistriesKey } from '../../renderers/registry'
 import { createInputPropsRegistry, inputPropsRegistryKey } from '../../renderers/inputProps'
+import { frameworkUiDefaultsKey } from '../../components/views/uiDefaults'
 import { useResourceRuntime } from '../../resources/runtime'
 
 const App = defineComponent(() => () => h('div'))
@@ -32,6 +33,9 @@ describe('FrameworkPlugin', () => {
     expect(useResourceRuntime().fieldDefaults)
       .toBe(second._context.provides[frameworkFieldDefaultsKey as symbol])
     expect(first._context.provides[inputPropsRegistryKey as symbol]).toBe(inputProps)
+    expect(first._context.provides[frameworkUiDefaultsKey as symbol]).toEqual({})
+    const labelled = createApp(App).use(FrameworkPlugin, { uiDefaults: { backLabel: 'Kembali' } })
+    expect(labelled._context.provides[frameworkUiDefaultsKey as symbol]).toEqual({ backLabel: 'Kembali' })
 
     let inComponent: ReturnType<typeof useResourceRuntime> | undefined
     const Probe = defineComponent({ setup() { inComponent = useResourceRuntime(); return () => h('div') } })

@@ -7,6 +7,11 @@ import { createFrameworkQueryClient, frameworkQueryClientKey } from '../query/cl
 import { createRendererRegistries, rendererRegistriesKey, type RendererRegistriesInput } from '../renderers/registry'
 import { emptyInputPropsRegistry, inputPropsRegistryKey, type InputPropsRegistry } from '../renderers/inputProps'
 import { registerResourceRuntime } from '../resources/runtime'
+import {
+  frameworkUiDefaultsKey,
+  resolveFrameworkUiDefaults,
+  type FrameworkUiDefaultsInput,
+} from '../components/views/uiDefaults'
 
 export interface FrameworkPluginOptions {
   fieldDefaults?: FrameworkFieldDefaultsInput
@@ -18,6 +23,8 @@ export interface FrameworkPluginOptions {
   renderers?: RendererRegistriesInput
   /** App-owned source-to-native-input-props registry. */
   inputProps?: InputPropsRegistry
+  /** App-level chrome defaults for view shells. */
+  uiDefaults?: FrameworkUiDefaultsInput
 }
 
 export const FrameworkPlugin: Plugin<[options?: FrameworkPluginOptions]> = {
@@ -31,6 +38,7 @@ export const FrameworkPlugin: Plugin<[options?: FrameworkPluginOptions]> = {
     app.provide(rendererRegistriesKey, createRendererRegistries(options?.renderers))
     const inputProps = options.inputProps ?? emptyInputPropsRegistry()
     app.provide(inputPropsRegistryKey, inputProps)
+    app.provide(frameworkUiDefaultsKey, resolveFrameworkUiDefaults(options.uiDefaults))
 
     const queryClient = options?.queryClient ?? createFrameworkQueryClient(adapters.queryDefaults)
     app.provide(frameworkQueryClientKey, queryClient)
