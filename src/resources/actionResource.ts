@@ -288,6 +288,14 @@ export interface CreateResourceActionArguments<TCreate extends object> {
   context?: FieldContext
 }
 
+/**
+ * Memoizes action-bag creation for referential stability across renders.
+ * The FIFO bound caps memory (per-id detail/update bags) and the staleness
+ * window of permission closures captured inside bags; eviction only costs a
+ * recompute of a pure factory.
+ */
+const PROPS_CACHE_LIMIT = 200
+
 function memoize<TArgs, TResult>(create: (args: TArgs) => TResult) {
   const cache = new Map<string, TResult>()
   return (args: TArgs): TResult => {
@@ -295,6 +303,7 @@ function memoize<TArgs, TResult>(create: (args: TArgs) => TResult) {
     const cached = cache.get(key)
     if (cached) return cached
     const result = create(args)
+    if (cache.size >= PROPS_CACHE_LIMIT) cache.delete(cache.keys().next().value!)
     cache.set(key, result)
     return result
   }
@@ -325,16 +334,23 @@ function identityToken(id: RecordIdentity): string {
 
 type ResourceSurface = 'table' | 'detail' | 'form'
 
-function readResourceRecord<TRecord extends object>(
-  record: TRecord | undefined,
+/**
+ * Renderer keys depend only on fields, field defaults, and the input-props
+ * registry — never on a record. Fields references are stable (memoized action
+ * bags), so one map per fields reference serves every row and detail load.
+ */
+const EMPTY_RENDERER_MAP: ReadonlyMap<string, string> = new Map()
+const rendererMapCache = new WeakMap<object, Map<string, string>>()
+
+function rendererMapOf(
   fields: FieldsInput<any, any> | undefined,
-  surface: ResourceSurface,
   runtime: ReturnType<typeof useResourceRuntime>,
-): TRecord | undefined {
-  if (!record || !fields || !runtime.inputProps) return record
-  const surfaces = [...new Set<ResourceSurface>([surface, 'form', 'detail', 'table'])]
+): ReadonlyMap<string, string> {
+  if (!fields || !runtime.inputProps) return EMPTY_RENDERER_MAP
+  const cached = rendererMapCache.get(fields)
+  if (cached) return cached
   const renderers = new Map<string, string>()
-  for (const currentSurface of surfaces) {
+  for (const currentSurface of ['table', 'detail', 'form'] as const) {
     const resolved = resolveFields({
       fields,
       surface: currentSurface,
@@ -345,6 +361,16 @@ function readResourceRecord<TRecord extends object>(
       if (field.renderer && !renderers.has(field.key)) renderers.set(field.key, field.renderer)
     }
   }
+  rendererMapCache.set(fields, renderers)
+  return renderers
+}
+
+function readResourceRecord<TRecord extends object>(
+  record: TRecord | undefined,
+  renderers: ReadonlyMap<string, string>,
+  runtime: ReturnType<typeof useResourceRuntime>,
+): TRecord | undefined {
+  if (!record || !runtime.inputProps || renderers.size === 0) return record
   const next = { ...record } as Record<string, unknown>
   for (const [key, renderer] of renderers) {
     if (!Object.prototype.hasOwnProperty.call(next, key)) continue
@@ -358,9 +384,10 @@ function readCollectionRecords<TRecord extends object>(
   fields: FieldsInput<any, any> | undefined,
   runtime: ReturnType<typeof useResourceRuntime>,
 ): CollectionResult<TRecord> {
+  const renderers = rendererMapOf(fields, runtime)
   return {
     ...result,
-    data: result.data.map((record) => readResourceRecord(record, fields, 'table', runtime) as TRecord),
+    data: result.data.map((record) => readResourceRecord(record, renderers, runtime) as TRecord),
   }
 }
 
@@ -523,8 +550,7 @@ export function defineActionResource<
       const detailFields = resolveFieldReferences(declaration.fields, schema, definition.key, 'detail') as FieldsInput<TRecord>
       const run = async (context: LoadSignalContext = {}) => readResourceRecord(
         await declaration.run({ id: args.id, searchParameters, ...context }),
-        detailFields,
-        'detail',
+        rendererMapOf(detailFields, runtime()),
         runtime(),
       )
       return {
@@ -547,7 +573,7 @@ export function defineActionResource<
       const run = async (input: TCreate) => {
         const result = await declaration.run(input)
         await invalidate()
-        return readResourceRecord(result, createFields, 'form', runtime()) as TRecord
+        return readResourceRecord(result, rendererMapOf(createFields, runtime()), runtime()) as TRecord
       }
       const context: FieldContext = {
         ...(args?.context ?? {}),
@@ -574,11 +600,11 @@ export function defineActionResource<
       const run = async (input: TUpdate) => {
         const result = await declaration.run(args.id, input)
         await invalidate({ id: args.id })
-        return readResourceRecord(result, updateFields, 'form', runtime()) as TRecord
+        return readResourceRecord(result, rendererMapOf(updateFields, runtime()), runtime()) as TRecord
       }
       const load = detailDeclaration ? async (context: RecordLoadContext<TIdentity>) => {
         const result = await detailDeclaration.run({ ...context, id: args.id, searchParameters })
-        return readResourceRecord(result, updateFields, 'form', runtime()) as Partial<TUpdate> | undefined
+        return readResourceRecord(result, rendererMapOf(updateFields, runtime()), runtime()) as Partial<TUpdate> | undefined
       } : undefined
       const defaultTo = formDefaultTo(declaration.defaultTo, detailDeclaration?.route, identity)
       const context: FieldContext = {

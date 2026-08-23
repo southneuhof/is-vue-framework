@@ -19,10 +19,12 @@ const table = {
       <span>{{ meta?.total }} {{ loading }} {{ error?.message }} {{ empty }}</span>
       <button type="button" @click="refresh()">Refresh</button>
       <button type="button" @click="updateQuery({ page: 1 })">Page</button>
-      <RouterLink v-if="actions.createRoute" :to="actions.createRoute">Create</RouterLink>
-      <button type="button" @click="actions.detailRoute?.(records[0]!)">View</button>
-      <button type="button" @click="actions.updateRoute?.(records[0]!)">Edit</button>
-      <span v-if="actions.can?.('delete', records[0]!)" @click="actions.deleteRecord?.(records[0]!)">Delete</span>
+      <template v-if="actions">
+        <RouterLink v-if="actions.createRoute" :to="actions.createRoute">Create</RouterLink>
+        <button type="button" @click="actions.detailRoute?.(records[0]!)">View</button>
+        <button type="button" @click="actions.updateRoute?.(records[0]!)">Edit</button>
+        <span v-if="actions.can?.('delete', records[0]!)" @click="actions.deleteRecord?.(records[0]!)">Delete</span>
+      </template>
     </template>
   </ListView>
 </template>

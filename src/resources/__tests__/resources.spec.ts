@@ -338,3 +338,24 @@ describe('defineActionResource delete permission invariant', () => {
     expect(value.delete({ id: '1' })).toBeDefined()
   })
 })
+
+describe('action-bag cache bound', () => {
+  it('evicts oldest bags once the cache limit is exceeded', () => {
+    registerResourceRuntime({
+      queryClient: createFrameworkQueryClient(),
+      adapters: resolveFrameworkAdapters(),
+      fieldDefaults: resolveFrameworkFieldDefaults(),
+    })
+    const value = defineResource(schema, {
+      key: 'records-cache-bound',
+      actions: {
+        detail: { run: async ({ id }) => ({ id: String(id), name: 'One' }), fields: [fields.name] },
+        delete: { run: async (id) => id, permission: null },
+      },
+    })
+    const first = value.detail({ id: '0' })
+    expect(value.detail({ id: '0' })).toBe(first)
+    for (let i = 1; i <= 200; i += 1) value.detail({ id: String(i) })
+    expect(value.detail({ id: '0' })).not.toBe(first)
+  })
+})
