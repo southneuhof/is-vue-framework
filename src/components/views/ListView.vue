@@ -124,6 +124,8 @@ const surface = computed<ListViewSurface>(() => {
   if ("run" in props && props.run) {
     return {
       table: {
+        // @ts-ignore -- vue-tsc TS2590: union too complex under unbound generics in
+        // the app program only; remove when vue-tsc materializes this. plans/11
         fields: props.fields,
         load: props.run,
         namespace: props.namespace,

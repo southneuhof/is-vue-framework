@@ -56,7 +56,10 @@ const action = computed<ActionFormProps | undefined>(() => {
 })
 
 const surface = computed<FormProps>(() => {
-  if ('formProps' in props && props.formProps) return props.formProps
+  if ('formProps' in props && props.formProps)
+    // @ts-ignore -- vue-tsc TS2590: union too complex under unbound generics in the
+    // app program only; remove when vue-tsc materializes this. plans/11
+    return props.formProps
   const current = action.value!
   return {
     fields: current.fields,
