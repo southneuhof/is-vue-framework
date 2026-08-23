@@ -823,7 +823,7 @@ describe('ListView row delete control', () => {
 
   it('lets a #delete slot replace the native control', async () => {
     const view = mountRows(
-      { delete: ({ record }: { record: { id: string } }) => h('span', { class: 'custom-delete' }, `custom-${record.id}`) },
+      { 'row-actions-delete': ({ record }: { record: { id: string } }) => h('span', { class: 'custom-delete' }, `custom-${record.id}`) },
       { deleteRecord: async () => undefined },
     )
     await flush()
@@ -844,12 +844,100 @@ describe('ListView row delete control', () => {
       },
       {
         slots: {
-          delete: () => h('span', { class: 'custom-delete' }, 'should-not-render'),
+          'row-actions-delete': () => h('span', { class: 'custom-delete' }, 'should-not-render'),
         },
       },
     )
     await flush()
     expect(view.find('.custom-delete')).toBeNull()
+    expect(view.text()).not.toContain('should-not-render')
+    view.unmount()
+  })
+})
+
+describe('ListView standard action overrides', () => {
+  const baseProps = {
+    fields: { name: { label: 'Name' } },
+    namespace: 'action-overrides',
+  }
+
+  function mountWith(slots: Record<string, unknown>) {
+    return mountCore(
+      ListView,
+      {
+        ...baseProps,
+        run: () => ({ data: [{ id: '1', name: 'Admin' }], meta: { total: 1, totalPage: 1 } }),
+        createRoute: { name: 'test-route' },
+        detailRoute: (record: Record<string, unknown>) => ({ name: 'test-route', params: { id: String(record.id) } }),
+        updateRoute: (record: Record<string, unknown>) => ({ name: 'test-route', params: { id: String(record.id) } }),
+        can: (operation: string, record?: Record<string, unknown>) =>
+          operation === 'delete' ? record?.id === '1' : operation === 'create',
+        deleteRecord: async () => undefined,
+      },
+      { slots },
+    )
+  }
+
+  it('renders native controls when no overrides are given', async () => {
+    const view = mountWith({})
+    await flush()
+    expect(view.find('a[aria-label="View"]')).not.toBeNull()
+    expect(view.find('a[aria-label="Edit"]')).not.toBeNull()
+    expect(view.find('button[aria-label="Delete"]')).not.toBeNull()
+    expect(view.text()).toContain('Create')
+    view.unmount()
+  })
+
+  it('replaces view, edit and delete with slot content while natives stay hidden', async () => {
+    let viewCan: unknown
+    const view = mountWith({
+      'row-actions-view': (props: { can?: unknown }) => { viewCan = props.can; return h('span', { class: 'ov-view' }, 'V') },
+      'row-actions-edit': () => h('span', { class: 'ov-edit' }, 'E'),
+      'row-actions-delete': () => h('span', { class: 'ov-del' }, 'D'),
+    })
+    await flush()
+    expect(typeof viewCan).toBe('function')
+    expect( (viewCan as (operation: string, record?: Record<string, unknown>) => boolean)('delete', { id: '1' })).toBe(true)
+    expect(view.find('.ov-view')).not.toBeNull()
+    expect(view.find('.ov-edit')).not.toBeNull()
+    expect(view.find('.ov-del')).not.toBeNull()
+    expect(view.find('a[aria-label="View"]')).toBeNull()
+    expect(view.find('a[aria-label="Edit"]')).toBeNull()
+    expect(view.find('button[aria-label="Delete"]')).toBeNull()
+    view.unmount()
+  })
+
+  it('replaces the toolbar Create button via #create-action', async () => {
+    let createCan: unknown
+    const view = mountWith({
+      'create-action': (props: { target: unknown; can?: unknown }) => {
+        createCan = props.can
+        return h('span', { class: 'ov-create' }, JSON.stringify(props.target))
+      },
+    })
+    await flush()
+    expect(view.find('.ov-create')?.textContent).toContain('test-route')
+    expect(typeof createCan).toBe('function')
+    expect((createCan as (operation: string) => boolean)('create')).toBe(true)
+    expect(view.text()).not.toContain('Create')
+    view.unmount()
+  })
+
+  it('hides create override content when no create route is permitted', async () => {
+    const view = mountCore(
+      ListView,
+      {
+        ...baseProps,
+        run: () => ({ data: [{ id: '1' }], meta: { totalPage: 1 } }),
+      },
+      {
+        slots: {
+          'create-action': () => h('span', { class: 'ov-create' }, 'should-not-render'),
+        },
+      },
+    )
+    await flush()
+    expect(view.find('.ov-create')).toBeNull()
     expect(view.text()).not.toContain('should-not-render')
     view.unmount()
   })

@@ -100,11 +100,14 @@ defineSlots<{
   [name: `cell:${string}`]: (props: { value: unknown; record: Record<string, unknown>; field: unknown; index: number }) => unknown;
   collection?: (props: CollectionSlotProps<TRecord, TQuery> & { actions?: ListViewActions }) => unknown;
   /**
-   * Overrides the native row-delete control. The framework owns visibility:
-   * without per-record delete permission nothing renders, so custom content
+   * Per-standard-action overrides. The framework owns visibility: each region
+   * renders only when its action is declared and permitted, so custom content
    * never needs its own permission checks. Props are for nuance only.
    */
-  delete?: (props: { record: Record<string, unknown>; can?: ListViewActions["can"]; deleteRecord?: ListViewActions["deleteRecord"] }) => unknown;
+  "row-actions-view"?: (props: { record: Record<string, unknown>; can?: ListViewActions["can"]; target: import("vue-router").RouteLocationRaw }) => unknown;
+  "row-actions-edit"?: (props: { record: Record<string, unknown>; can?: ListViewActions["can"]; target: import("vue-router").RouteLocationRaw }) => unknown;
+  "row-actions-delete"?: (props: { record: Record<string, unknown>; can?: ListViewActions["can"]; deleteRecord?: ListViewActions["deleteRecord"] }) => unknown;
+  "create-action"?: (props: { can?: ListViewActions["can"]; target: import("vue-router").RouteLocationRaw }) => unknown;
   header?: () => unknown;
   controls?: () => unknown;
   filters?: () => unknown;
@@ -213,7 +216,10 @@ const passthroughSlots = computed(() =>
         "filters",
         "body",
         "collection",
-        "delete",
+        "create-action",
+        "row-actions-view",
+        "row-actions-edit",
+        "row-actions-delete",
         "footer",
         "row-actions",
       ].includes(name),
@@ -426,11 +432,15 @@ const customActions = computed<ListViewActions>(() => ({
               </slot>
             </div>
           </div>
-          <RouterLink v-if="surface.createRoute" :to="surface.createRoute">
-            <Button>
-              <template #icon><Icon name="add" /></template>Create
-            </Button>
-          </RouterLink>
+          <template v-if="surface.createRoute">
+            <slot name="create-action" v-bind="{ can: surface.can, target: surface.createRoute }">
+              <RouterLink :to="surface.createRoute">
+                <Button>
+                  <template #icon><Icon name="add" /></template>Create
+                </Button>
+              </RouterLink>
+            </slot>
+          </template>
           <slot name="controls" />
         </div>
       </header>
@@ -472,41 +482,47 @@ const customActions = computed<ListViewActions>(() => ({
                     class="flex items-center justify-end gap-1"
                     aria-label="Row actions"
                   >
-                    <RouterLink
-                      v-if="surface.detailRoute?.(record)"
-                      v-slot="{ href, navigate }"
-                      custom
-                      :to="surface.detailRoute(record)!"
-                    >
-                      <Button
-                        kind="icon"
-                        variant="standard"
-                        :href="href"
-                        aria-label="View"
-                        @click.stop="navigate"
-                      >
-                        <template #icon><Icon name="eye" size="base" /></template>
-                      </Button>
-                    </RouterLink>
-                    <RouterLink
-                      v-if="surface.updateRoute?.(record)"
-                      v-slot="{ href, navigate }"
-                      custom
-                      :to="surface.updateRoute(record)!"
-                    >
-                      <Button
-                        kind="icon"
-                        variant="standard"
-                        :href="href"
-                        aria-label="Edit"
-                        @click.stop="navigate"
-                      >
-                        <template #icon><Icon name="edit" size="base" /></template>
-                      </Button>
-                    </RouterLink>
+                    <template v-if="surface.detailRoute?.(record)">
+                      <slot name="row-actions-view" v-bind="{ record, can: surface.can, target: surface.detailRoute(record)! }">
+                        <RouterLink
+                          v-slot="{ href, navigate }"
+                          custom
+                          :to="surface.detailRoute(record)!"
+                        >
+                          <Button
+                            kind="icon"
+                            variant="standard"
+                            :href="href"
+                            aria-label="View"
+                            @click.stop="navigate"
+                          >
+                            <template #icon><Icon name="eye" size="base" /></template>
+                          </Button>
+                        </RouterLink>
+                      </slot>
+                    </template>
+                    <template v-if="surface.updateRoute?.(record)">
+                      <slot name="row-actions-edit" v-bind="{ record, can: surface.can, target: surface.updateRoute(record)! }">
+                        <RouterLink
+                          v-slot="{ href, navigate }"
+                          custom
+                          :to="surface.updateRoute(record)!"
+                        >
+                          <Button
+                            kind="icon"
+                            variant="standard"
+                            :href="href"
+                            aria-label="Edit"
+                            @click.stop="navigate"
+                          >
+                            <template #icon><Icon name="edit" size="base" /></template>
+                          </Button>
+                        </RouterLink>
+                      </slot>
+                    </template>
                     <template v-if="surface.can?.('delete', record)">
                       <slot
-                        name="delete"
+                        name="row-actions-delete"
                         v-bind="{ record, can: surface.can, deleteRecord: surface.deleteRecord }"
                       >
                         <Dialog v-if="surface.deleteRecord">
