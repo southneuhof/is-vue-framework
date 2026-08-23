@@ -306,3 +306,35 @@ describe('action resources', () => {
     expect(value.update({ id: '1' }).context).toEqual({ operation: 'update', permission: null })
   })
 })
+
+describe('defineActionResource delete permission invariant', () => {
+  it('throws when a delete action omits permission', () => {
+    registerResourceRuntime({
+      queryClient: createFrameworkQueryClient(),
+      adapters: resolveFrameworkAdapters(),
+      fieldDefaults: resolveFrameworkFieldDefaults(),
+    })
+    expect(() =>
+      defineResource(schema, {
+        key: 'records-delete-ungated',
+        actions: {
+          // @ts-expect-error delete permission is required
+          delete: { run: async (id: string) => id },
+        },
+      }),
+    ).toThrowError(/action "delete" needs an explicit permission/)
+  })
+
+  it('accepts an explicit null permission as allow-all', () => {
+    registerResourceRuntime({
+      queryClient: createFrameworkQueryClient(),
+      adapters: resolveFrameworkAdapters(),
+      fieldDefaults: resolveFrameworkFieldDefaults(),
+    })
+    const value = defineResource(schema, {
+      key: 'records-delete-null',
+      actions: { delete: { run: async (id: string) => id, permission: null } },
+    })
+    expect(value.delete({ id: '1' })).toBeDefined()
+  })
+})

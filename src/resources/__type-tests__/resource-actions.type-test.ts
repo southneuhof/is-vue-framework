@@ -23,7 +23,7 @@ const resource = defineResource(schema, {
     detail: { run: async ({ id }) => ({ id: String(id), name: 'One' }), fields: [fields.name] },
     create: { run: async (input: Draft) => ({ id: '1', ...input }), fields: [fields.name] },
     update: { run: async (id: string, input: Draft) => ({ id, ...input }), fields: [fields.name] },
-    delete: { run: async (id: string) => id },
+    delete: { run: async (id: string) => id, permission: 'delete-rows' },
     verify: { run: async (id: string, result: 'approved' | 'rejected') => `${id}:${result}` },
   },
 })

@@ -136,7 +136,8 @@ export interface UpdateResourceAction<
 
 export interface DeleteResourceAction<TIdentity extends RecordIdentity> extends ActionVisibility {
   run: DeleteRun<TIdentity>
-  permission?: string | null
+  /** Required: write the real permission code, or an explicit null to allow all. */
+  permission: string | null
 }
 
 export type ResourceCustomAction = { run: (...args: any[]) => any }
@@ -448,6 +449,9 @@ export function defineActionResource<
   type TIdentity = WebResourceIdentityOf<TSchema>
   const actions = definition.actions
   for (const [action, declaration] of Object.entries(actions) as [string, ResourceCustomAction & { route?: ResourceActionRoute<TIdentity>; permission?: string | null }][]) {
+    if (action === 'delete' && (declaration as { permission?: string | null }).permission === undefined) {
+      throw new Error(`[is-vue-framework] Resource "${definition.key}" action "delete" needs an explicit permission (string or null).`)
+    }
     if (!['list', 'detail', 'create', 'update', 'delete'].includes(action)) continue
     if (!('route' in declaration) || !declaration.route) continue
     registerResourceAction(declaration.route.name, {
