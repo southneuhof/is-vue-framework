@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="TRecord extends object = Record<string, unknown>, TQuery extends object = Record<string, unknown>">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import type { CollectionProps, QueryValues, RowReorderPayload, TableProps } from '../../contracts'
 import Collection from './Collection.vue'
 import TableContent from './TableContent.vue'
@@ -20,11 +20,11 @@ const emit = defineEmits<{
   (event: 'row-reorder', payload: RowReorderPayload): void
 }>()
 
-const collectionRef = ref<{ refresh: () => Promise<void> }>()
-const exposedQuery = ref<QueryValues>({ page: 1, limit: props.defaultPageSize })
-watch(() => props.query, (value) => {
-  if (value) exposedQuery.value = { ...value } as QueryValues
-}, { immediate: true })
+defineSlots<{
+  collection?: (props: import('../../contracts').CollectionSlotProps<TRecord, TQuery>) => unknown
+  [name: string]: unknown
+}>()
+const collectionRef = ref<{ refresh: () => Promise<void>; query: { value: QueryValues }; updateQuery: (patch: QueryValues) => void; replaceQuery: (values: QueryValues) => void }>()
 
 const collectionProps = computed<CollectionProps<TRecord, TQuery>>(() => {
   const value: CollectionProps<TRecord, TQuery> = {
@@ -41,14 +41,16 @@ const collectionProps = computed<CollectionProps<TRecord, TQuery>>(() => {
   return value
 })
 
-function updateQuery(query: QueryValues) {
-  exposedQuery.value = query
-  emit('update:query', query)
+function updateQuery(patch: QueryValues) {
+  collectionRef.value?.updateQuery(patch)
+  const values = collectionRef.value?.query.value
+  if (values) emit('update:query', values)
 }
 
-function updateCollectionQuery(query: QueryValues) {
-  exposedQuery.value = query
-  emit('update:query', query)
+function replaceQuery(values: QueryValues) {
+  collectionRef.value?.replaceQuery(values)
+  const next = collectionRef.value?.query.value
+  if (next) emit('update:query', next)
 }
 
 function refresh() {
@@ -63,13 +65,18 @@ function rowReorder(payload: RowReorderPayload) {
   emit('row-reorder', payload)
 }
 
-defineExpose({ refresh, query: exposedQuery, updateQuery })
+/** Public read view of the collection-owned query state. */
+const exposedQuery = computed<QueryValues>(() => collectionRef.value?.query ?? {})
+
+defineExpose({ refresh, query: exposedQuery, updateQuery, replaceQuery })
 </script>
 
 <template>
-  <Collection ref="collectionRef" v-bind="collectionProps" @update:query="updateCollectionQuery">
+  <Collection ref="collectionRef" v-bind="collectionProps" @update:query="emit('update:query', $event)">
     <template #default="collection">
+      <slot v-if="$slots.collection" name="collection" v-bind="collection" />
       <TableContent
+        v-else
         :fields="props.fields"
         :records="collection.records"
         :meta="collection.meta"

@@ -59,6 +59,11 @@ function updateQuery(patch: QueryValues) {
   if (hasControlledQuery) emit('update:query', query.values.value)
 }
 
+function replaceQuery(values: QueryValues) {
+  query.replace(values)
+  if (hasControlledQuery) emit('update:query', query.values.value)
+}
+
 const slotProps = computed<CollectionSlotProps<TRecord, TQuery>>(() => ({
   records: records.value,
   meta: meta.value,
@@ -70,7 +75,7 @@ const slotProps = computed<CollectionSlotProps<TRecord, TQuery>>(() => ({
   updateQuery,
 }))
 
-defineExpose({ refresh: loaded.refresh, query: query.values, updateQuery })
+defineExpose({ refresh: loaded.refresh, query: query.values, updateQuery, replaceQuery })
 </script>
 
 <template>

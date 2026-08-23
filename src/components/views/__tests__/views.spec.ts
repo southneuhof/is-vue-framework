@@ -785,3 +785,72 @@ describe('shell boundaries', () => {
     view.unmount()
   })
 })
+
+describe('ListView row delete control', () => {
+  const baseProps = {
+    fields: { name: { label: 'Name' } },
+    namespace: 'delete-slot',
+  }
+
+  function mountRows(slots: Record<string, unknown>, extra: Record<string, unknown> = {}) {
+    return mountCore(
+      ListView,
+      {
+        ...baseProps,
+        run: () => ({ data: [{ id: '1', name: 'Admin' }], meta: { total: 1, totalPage: 1 } }),
+        can: (operation: string, record?: Record<string, unknown>) =>
+          operation === 'delete' && record?.id === '1',
+        ...extra,
+      },
+      { slots },
+    )
+  }
+
+  it('renders the native delete only when a delete action is runnable and permitted', async () => {
+    const view = mountRows({}, { deleteRecord: async () => undefined })
+    await flush()
+    expect(view.find('button[aria-label="Delete"]')).not.toBeNull()
+    view.unmount()
+  })
+
+  it('renders nothing when the capability exists but no delete action backs it', async () => {
+    const view = mountRows({})
+    await flush()
+    expect(view.text()).not.toContain('Delete')
+    expect(view.find('button[aria-label="Delete"]')).toBeNull()
+    view.unmount()
+  })
+
+  it('lets a #delete slot replace the native control', async () => {
+    const view = mountRows(
+      { delete: ({ record }: { record: { id: string } }) => h('span', { class: 'custom-delete' }, `custom-${record.id}`) },
+      { deleteRecord: async () => undefined },
+    )
+    await flush()
+    expect(view.find('.custom-delete')).not.toBeNull()
+    expect(view.find('button[aria-label="Delete"]')).toBeNull()
+    view.unmount()
+  })
+
+  it('hides custom delete content too when permission is missing', async () => {
+    const view = mountCore(
+      ListView,
+      {
+        ...baseProps,
+        run: () => ({ data: [{ id: '2', name: 'Other' }], meta: { total: 1, totalPage: 1 } }),
+        can: (operation: string, record?: Record<string, unknown>) =>
+          operation === 'delete' && record?.id === '1',
+        deleteRecord: async () => undefined,
+      },
+      {
+        slots: {
+          delete: () => h('span', { class: 'custom-delete' }, 'should-not-render'),
+        },
+      },
+    )
+    await flush()
+    expect(view.find('.custom-delete')).toBeNull()
+    expect(view.text()).not.toContain('should-not-render')
+    view.unmount()
+  })
+})

@@ -61,6 +61,8 @@ export interface NamespacedQueryOptions {
 export interface NamespacedQuery {
   values: Ref<QueryValues>
   update: (patch: QueryValues) => void
+  /** Sets the whole query, discarding keys absent from `values`. */
+  replace: (values: QueryValues) => void
   reset: () => void
 }
 
@@ -75,6 +77,9 @@ export function useNamespacedQuery(options: NamespacedQueryOptions): NamespacedQ
       values: local,
       update: (patch) => {
         local.value = { ...local.value, ...patch }
+      },
+      replace: (values) => {
+        local.value = coerceQueryValues(values, readDefaults())
       },
       reset: () => {
         local.value = readDefaults()
@@ -123,6 +128,11 @@ export function useNamespacedQuery(options: NamespacedQueryOptions): NamespacedQ
       const next = { ...values.value, ...patch }
       values.value = next
       push(next)
+    },
+    replace: (next) => {
+      const coerced = coerceQueryValues(next, readDefaults())
+      values.value = coerced
+      push(coerced)
     },
     reset: () => {
       const next = readDefaults()

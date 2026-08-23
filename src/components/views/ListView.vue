@@ -14,14 +14,11 @@ import type {
   FieldsInput,
   MaybePromise,
   QueryValues,
-  RecordIdentity,
   TableProps,
   ValidationSchema,
 } from "../../contracts";
 import { resolveFields } from "../../fields";
-import { useNamespacedQuery } from "../../query";
-import Collection from "../core/Collection.vue";
-import TableContent from "../core/TableContent.vue";
+import Table from "../core/Table.vue";
 import Form from "../core/Form.vue";
 import Button from "../base/Button.vue";
 import Card from "../base/Card.vue";
@@ -30,11 +27,7 @@ import Icon from "../base/Icon.vue";
 import Popover from "../base/Popover.vue";
 import SearchBox from "../composites/SearchBox.vue";
 import Switch from "../inputs/Switch.vue";
-import {
-  createWorkbook,
-  downloadWorkbook,
-  type ListExportOptions,
-} from "../../services";
+import { exportTableRows, type ListExportOptions } from "../../services";
 import { useTablePreferences } from "../core/useTablePreferences";
 
 export interface ListFilters<TQuery extends object = Record<string, unknown>> {
@@ -51,16 +44,20 @@ export interface ListFilters<TQuery extends object = Record<string, unknown>> {
  * The values come from the same internal surface the table row actions use;
  * a collection presentation must not rebuild route or delete permission checks.
  */
+/**
+ * Standard record actions forwarded to the collection presentation slot.
+ *
+ * The values come from the same internal surface the table row actions use;
+ * a collection presentation must not rebuild route or delete permission checks.
+ * Optional: a bare `table` ListView has no resource context, so it exposes no
+ * actions — consumers must handle their absence.
+ */
 export interface ListViewActions {
-  createRoute: import("vue-router").RouteLocationRaw | undefined;
-  detailRoute:
-    | ((record: Record<string, unknown>) => import("vue-router").RouteLocationRaw | undefined)
-    | undefined;
-  updateRoute:
-    | ((record: Record<string, unknown>) => import("vue-router").RouteLocationRaw | undefined)
-    | undefined;
-  can?: ((operation: import("../../contracts").ResourceOperation, record?: Record<string, unknown>) => boolean) | undefined;
-  deleteRecord: ((record: Record<string, unknown>) => Promise<unknown>) | undefined;
+  createRoute?: import("vue-router").RouteLocationRaw;
+  detailRoute?: (record: Record<string, unknown>) => import("vue-router").RouteLocationRaw | undefined;
+  updateRoute?: (record: Record<string, unknown>) => import("vue-router").RouteLocationRaw | undefined;
+  can?: (operation: import("../../contracts").ResourceOperation, record?: Record<string, unknown>) => boolean | undefined;
+  deleteRecord?: (record: Record<string, unknown>) => Promise<unknown>;
 }
 
 type ListViewProps = {
@@ -101,7 +98,13 @@ const emit = defineEmits<{
 const slots = useSlots();
 defineSlots<{
   [name: `cell:${string}`]: (props: { value: unknown; record: Record<string, unknown>; field: unknown; index: number }) => unknown;
-  collection?: (props: CollectionSlotProps<TRecord, TQuery> & { actions: ListViewActions }) => unknown;
+  collection?: (props: CollectionSlotProps<TRecord, TQuery> & { actions?: ListViewActions }) => unknown;
+  /**
+   * Overrides the native row-delete control. The framework owns visibility:
+   * without per-record delete permission nothing renders, so custom content
+   * never needs its own permission checks. Props are for nuance only.
+   */
+  delete?: (props: { record: Record<string, unknown>; can?: ListViewActions["can"]; deleteRecord?: ListViewActions["deleteRecord"] }) => unknown;
   header?: () => unknown;
   controls?: () => unknown;
   filters?: () => unknown;
@@ -141,58 +144,64 @@ const surface = computed<ListViewSurface>(() => {
       ...props.table!,
       pagination: props.table!.pagination ?? "always",
     },
-    createRoute: undefined,
-    detailRoute: undefined,
-    updateRoute: undefined,
-    can: undefined,
-    deleteRecord: undefined,
   };
 });
 
+/**
+ * The table (and its Collection) owns query state; ListView only forwards
+ * controlled bindings and toolbar mutations. `hasQueryBinding` keeps the
+ * prop off the Table when the route did not bind one, so Collection's
+ * uncontrolled URL-namespace mode stays intact.
+ */
 const hasQueryBinding = "query" in (getCurrentInstance()?.vnode.props ?? {});
-const queryDefaults = computed<QueryValues>(() => ({
-  page: 1,
-  limit: 10,
-  ...(props.filters?.defaults ?? {}),
-}));
-const localQuery = ref<QueryValues>({
-  ...queryDefaults.value,
-  ...(props.query ?? {}),
-});
-const tableNamespace = computed(() => surface.value.table.namespace);
-const queryState = useNamespacedQuery({
-  namespace: computed(() => tableNamespace.value ?? "table"),
-  defaults: queryDefaults,
-  local: hasQueryBinding || !tableNamespace.value ? localQuery : undefined,
-});
-const queryValues = queryState.values;
-const typedQuery = computed(() => queryValues.value as TQuery);
-
+const tableRef = ref<{ refresh: () => Promise<void>; updateQuery: (patch: QueryValues) => void; replaceQuery: (values: QueryValues) => void }>();
+const currentQuery = ref<QueryValues>({ page: 1 });
 watch(
   () => props.query,
   (value) => {
-    if (!hasQueryBinding) return;
-    localQuery.value = { ...queryDefaults.value, ...(value ?? {}) };
+    if (!hasQueryBinding || value === undefined) return;
+    currentQuery.value = {
+      page: 1,
+      ...(props.filters?.defaults ?? {}),
+      ...(value as QueryValues),
+    };
   },
+  { immediate: true },
 );
 
-function updateQuery(patch: QueryValues) {
-  queryState.update(patch);
-  emit("update:query", queryValues.value);
+/** Controlled query rides along only when the route actually bound one. */
+const tableBindings = computed(() => {
+  const base = { ...surface.value.table };
+  if (hasQueryBinding) (base as Record<string, unknown>).query = props.query;
+  return base;
+});
+
+function applyQuery(patch: QueryValues) {
+  tableRef.value?.updateQuery(patch);
+}
+
+function onTableQuery(values: QueryValues) {
+  currentQuery.value = values;
+  emit("update:query", values);
 }
 
 function updateFilters(next: Record<string, unknown>) {
-  updateQuery({ ...next, page: 1 });
+  applyQuery({ ...next, page: 1 });
 }
 
 function resetFilters() {
   const preserved = {
-    search: queryValues.value.search,
-    limit: queryValues.value.limit,
+    search: currentQuery.value.search,
+    limit: currentQuery.value.limit,
   };
-  queryState.reset();
-  queryState.update({ ...preserved, page: 1 });
-  emit("update:query", queryValues.value);
+  const restored: QueryValues = Object.assign(
+    {},
+    { page: 1 },
+    { limit: surface.value.table.defaultPageSize ?? 10 },
+    props.filters?.defaults ?? {},
+    preserved,
+  );
+  tableRef.value?.replaceQuery(restored);
 }
 
 const passthroughSlots = computed(() =>
@@ -204,6 +213,7 @@ const passthroughSlots = computed(() =>
         "filters",
         "body",
         "collection",
+        "delete",
         "footer",
         "row-actions",
       ].includes(name),
@@ -216,6 +226,7 @@ const columnFields = computed(() =>
   resolveFields({ fields: surface.value.table.fields as never, surface: "table" }),
 );
 const columnKeys = computed(() => columnFields.value.map((field) => field.key));
+const tableNamespace = computed(() => surface.value.table.namespace);
 const columnPreferences = useTablePreferences(
   tableNamespace,
   columnKeys,
@@ -271,61 +282,19 @@ async function exportRows() {
   if (props.export === false || exporting.value) return;
   exporting.value = true;
   try {
-    const { page: _page, limit: _limit, ...activeQuery } = queryValues.value;
-    const options = (props.export ?? {}) as ListExportOptions;
-    const searchParameters = surface.value.table.searchParameters ?? {};
-    let rows: TRecord[];
-    if (options.load) {
-      const result = await options.load({
-        query: activeQuery,
-        searchParameters,
-      });
-      rows = (Array.isArray(result) ? result : result.data) as TRecord[];
-    } else if (surface.value.table.data) rows = [...surface.value.table.data];
-    else if (surface.value.table.load) {
-      const pageSize =
-        Number.isInteger(options.pageSize) && options.pageSize! > 0
-          ? options.pageSize!
-          : 500;
-      rows = [];
-      let page = 1;
-      const seen = new Set<string>();
-      while (page <= 10_000) {
-        const result = await surface.value.table.load({
-          query: { ...activeQuery, page, limit: pageSize },
-          searchParameters,
-        } as never);
-        const batch = result.data ?? [];
-        const signature = JSON.stringify(batch.map((row) => row));
-        if (seen.has(signature))
-          throw new Error("[is-vue-framework] Export loader repeated a page.");
-        seen.add(signature);
-        rows.push(...batch as TRecord[]);
-        const meta = result.meta;
-        if (meta?.totalPage != null) {
-          if (meta.totalPage < 0 || page >= meta.totalPage) break;
-        } else if (meta?.total != null) {
-          if (meta.total < 0 || rows.length >= meta.total) break;
-        } else if (batch.length < pageSize) break;
-        page += 1;
-      }
-    } else return;
+    const { page: _page, limit: _limit, ...activeQuery } = currentQuery.value;
     const fields = columnFields.value.filter((field) =>
       columnPreferences.visibleKeys.value.includes(field.key),
     );
-    if (!fields.length)
-      throw new Error("[is-vue-framework] Export requires one visible column.");
-    const workbook = createWorkbook(rows as Record<string, unknown>[], fields, options);
-    const fallback =
-      `${surface.value.table.namespace ?? "export"}-${Date.now()}`.replace(
-        /[^a-zA-Z0-9._-]/g,
-        "-",
-      );
-    const filename =
-      typeof options.filename === "function"
-        ? options.filename({ query: activeQuery })
-        : (options.filename ?? fallback);
-    downloadWorkbook(workbook, filename);
+    await exportTableRows({
+      activeQuery: activeQuery as TQuery,
+      searchParameters: surface.value.table.searchParameters ?? {},
+      data: surface.value.table.data as TRecord[] | undefined,
+      load: surface.value.table.load as never,
+      fields,
+      options: (props.export ?? {}) as ListExportOptions<TRecord, TQuery>,
+      fallbackNamespace: surface.value.table.namespace,
+    });
     toast.success("Export created.");
   } catch (error) {
     toast.error("Could not create export.");
@@ -368,10 +337,10 @@ const customActions = computed<ListViewActions>(() => ({
             </slot>
             <div class="flex flex-wrap items-center gap-2">
               <SearchBox
-                :model-value="String(queryValues.search ?? '')"
+                :model-value="String(currentQuery.search ?? '')"
                 @update:model-value="
                   (search: string) =>
-                    updateQuery({ search: search || undefined, page: 1 })
+                    applyQuery({ search: search || undefined, page: 1 })
                 "
               />
               <Popover v-if="filters">
@@ -384,7 +353,7 @@ const customActions = computed<ListViewActions>(() => ({
                   <Form
                     :fields="filters.fields"
                     :schema="filters.schema"
-                    :model-value="queryValues"
+                    :model-value="currentQuery"
                     @update:model-value="updateFilters"
                   />
                   <Button
@@ -477,52 +446,28 @@ const customActions = computed<ListViewActions>(() => ({
     <Card variant="outlined" color="surfaceContainer" class="gap-0 p-0">
       <slot name="body" v-bind="{ table: surface.table }">
         <div class="p-3 sm:p-4">
-          <Collection
-            :data="surface.table.data"
-            :load="surface.table.load"
-            :search-parameters="surface.table.searchParameters"
-            :namespace="tableNamespace"
-            :query="typedQuery"
-            :pagination="surface.table.pagination"
-            :page-size-options="surface.table.pageSizeOptions"
-            :default-page-size="surface.table.defaultPageSize"
-            :reorderable="surface.table.reorderable"
-            @update:query="updateQuery"
+          <Table
+            ref="tableRef"
+            v-bind="tableBindings"
+            :namespace="surface.table.namespace ?? 'table'"
+            :visible-columns="columnPreferences.visibleKeys.value"
+            :column-sizing="columnSizing"
+            @update:query="onTableQuery"
+            @update:visible-columns="setVisibleColumns"
+            @update:column-sizing="setColumnSizing"
           >
-            <template #default="collection">
-              <TableContent
-                 v-if="!$slots.collection"
-                :fields="surface.table.fields"
-                :records="collection.records"
-                :meta="collection.meta"
-                :loading="collection.loading"
-                :error="collection.error"
-                :empty="collection.empty"
-                :query="collection.query"
-                :search-parameters="surface.table.searchParameters"
-                :namespace="tableNamespace"
-                :pagination="surface.table.pagination"
-                :page-size-options="surface.table.pageSizeOptions"
-                :default-page-size="surface.table.defaultPageSize"
-                :min-column-width="surface.table.minColumnWidth"
-                :visible-columns="columnPreferences.visibleKeys.value"
-                :column-sizing="columnSizing"
-                :reorderable="surface.table.reorderable"
-                :row-key="surface.table.rowKey"
-                :schema="surface.table.schema"
-                @update:query="collection.updateQuery"
-                @update:visible-columns="setVisibleColumns"
-                @update:column-sizing="setColumnSizing"
-              >
-                <template
-                  v-if="
-                    $slots['row-actions'] ||
-                    surface.detailRoute ||
-                    surface.updateRoute ||
-                    surface.can
-                  "
-                  #row-actions="{ record }"
-                >
+            <template v-if="$slots.collection" #collection="collection">
+              <slot name="collection" v-bind="{ ...collection, actions: customActions }" />
+            </template>
+            <template
+              v-if="
+                $slots['row-actions'] ||
+                surface.detailRoute ||
+                surface.updateRoute ||
+                surface.can
+              "
+              #row-actions="{ record }"
+            >
                   <div
                     class="flex items-center justify-end gap-1"
                     aria-label="Row actions"
@@ -559,37 +504,44 @@ const customActions = computed<ListViewActions>(() => ({
                         <template #icon><Icon name="edit" size="base" /></template>
                       </Button>
                     </RouterLink>
-                    <Dialog v-if="surface.can?.('delete', record)">
-                      <template #trigger>
-                        <Button
-                          kind="icon"
-                          variant="standard"
-                          color="error"
-                          aria-label="Delete"
-                          @click.stop
-                        >
-                          <template #icon><Icon name="delete-bin" size="base" /></template>
-                        </Button>
-                      </template>
-                      <template #title>Delete record?</template>
-                      <template #description>This action cannot be undone.</template>
-                      <template #footer="{ setOpen }">
-                        <div class="flex w-full justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="text"
-                            :disabled="deleting"
-                            @click="setOpen(false)"
-                          >Cancel</Button>
-                          <Button
-                            type="button"
-                            color="error"
-                            :disabled="deleting"
-                            @click="remove(record, setOpen)"
-                          >Delete</Button>
-                        </div>
-                      </template>
-                    </Dialog>
+                    <template v-if="surface.can?.('delete', record)">
+                      <slot
+                        name="delete"
+                        v-bind="{ record, can: surface.can, deleteRecord: surface.deleteRecord }"
+                      >
+                        <Dialog v-if="surface.deleteRecord">
+                          <template #trigger>
+                            <Button
+                              kind="icon"
+                              variant="standard"
+                              color="error"
+                              aria-label="Delete"
+                              @click.stop
+                            >
+                              <template #icon><Icon name="delete-bin" size="base" /></template>
+                            </Button>
+                          </template>
+                          <template #title>Delete record?</template>
+                          <template #description>This action cannot be undone.</template>
+                          <template #footer="{ setOpen }">
+                            <div class="flex w-full justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="text"
+                                :disabled="deleting"
+                                @click="setOpen(false)"
+                              >Cancel</Button>
+                              <Button
+                                type="button"
+                                color="error"
+                                :disabled="deleting"
+                                @click="remove(record, setOpen)"
+                              >Delete</Button>
+                            </div>
+                          </template>
+                        </Dialog>
+                      </slot>
+                    </template>
                     <slot name="row-actions" v-bind="{ record }" />
                   </div>
                 </template>
@@ -600,12 +552,7 @@ const customActions = computed<ListViewActions>(() => ({
                 >
                   <slot :name="name" v-bind="slotProps ?? {}" />
                 </template>
-              </TableContent>
-              <template v-else>
-                <slot name="collection" v-bind="{ ...collection, actions: customActions }" />
-              </template>
-            </template>
-          </Collection>
+          </Table>
         </div>
       </slot>
 
