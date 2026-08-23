@@ -259,6 +259,8 @@ export type ActionResource<
 > = {
   key: string
   actions: CustomActions<TActions>
+  /** Declared standard-action permissions, for capability checks outside view surfaces. */
+  permissions: Partial<Record<ResourceOperation, string | null>>
   invalidate: (args?: { id?: WebResourceIdentityOf<TSchema> }) => Promise<void>
 } & (HasAction<TActions, 'list'> extends true ? {
   list: (args?: ListResourceActionArguments<WebResourceQueryOf<TSchema>>) => ListResourceActionProps<WebResourceRecordOf<TSchema>, WebResourceQueryOf<TSchema>, WebResourceIdentityOf<TSchema>>
@@ -640,5 +642,11 @@ export function defineActionResource<
 
   const custom = Object.fromEntries(Object.entries(actions).filter(([key]) => !['list', 'detail', 'create', 'update', 'delete'].includes(key)).map(([key, action]) => [key, { run: (action as ResourceCustomAction).run }])) as CustomActions<TActions>
 
-  return { key: definition.key, actions: custom, invalidate, ...standard } as ActionResource<TSchema, TActions>
+  const permissions: Partial<Record<ResourceOperation, string | null>> = {}
+  for (const operation of ['list', 'detail', 'create', 'update', 'delete'] as const) {
+    if (!(operation in actions)) continue
+    permissions[operation] = (actions[operation] as { permission?: string | null }).permission ?? null
+  }
+
+  return { key: definition.key, actions: custom, permissions, invalidate, ...standard } as ActionResource<TSchema, TActions>
 }
