@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Datepicker from '@vuepic/vue-datepicker'
-import { useColorPreference } from '@southneuhof/is-vue-framework/adapters/state'
 import BaseInput from './BaseInput.vue'
+import { useFrameworkUi } from '../../adapters/projectAdapters'
 import { commonProps } from './commonprops'
 import { ref, watch, type PropType } from 'vue'
 import { lightFormat } from 'date-fns'
@@ -93,7 +93,7 @@ function displayFormatter(date: Date) {
       auto-apply
       :inline="inline"
       :format="displayFormatter"
-      :dark="useColorPreference().value === 'dark'"
+      :dark="useFrameworkUi().colorPreference().value === 'dark'"
       :teleport="teleport"
       :prevent-min-max-navigation="true"
       :enable-time-picker="withTimePicker"

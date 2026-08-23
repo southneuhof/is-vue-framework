@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Datepicker from '@vuepic/vue-datepicker'
-import { useColorPreference } from '@southneuhof/is-vue-framework/adapters/state'
 import BaseInput from './BaseInput.vue'
+import { useFrameworkUi } from '../../adapters/projectAdapters'
 import { commonProps } from './commonprops'
 import type { ComponentPublicInstance } from 'vue'
 import { nextTick, onMounted, ref } from 'vue'
@@ -68,7 +68,7 @@ onMounted(() => {
       :defaultDate="new Date()"
       :inline="inline"
       :format="displayFormatter"
-      :dark="useColorPreference().value === 'dark'"
+      :dark="useFrameworkUi().colorPreference().value === 'dark'"
       :teleport="teleport"
       :config="datepickerPopupConfig"
       :class="datepickerPopupClass"

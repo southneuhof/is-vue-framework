@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Datepicker from '@vuepic/vue-datepicker'
-import { useColorPreference } from '@southneuhof/is-vue-framework/adapters/state'
 import BaseInput from './BaseInput.vue'
+import { useFrameworkUi } from '../../adapters/projectAdapters'
 import { commonProps } from './commonprops'
 import { formatTimeValue, parseTimeValue, type TimeParts } from './timeInput.utils'
 import { ref, watch } from 'vue'
@@ -70,7 +70,7 @@ function displayFormatter(value: Record<string, any>) {
       v-model="internalValue"
       :format="displayFormatter"
       time-picker
-      :dark="useColorPreference().value === 'dark'"
+      :dark="useFrameworkUi().colorPreference().value === 'dark'"
       :teleport="teleport"
       :config="datepickerPopupConfig"
       :class="datepickerPopupClass"

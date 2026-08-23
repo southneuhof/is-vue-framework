@@ -65,13 +65,8 @@ export type { ResourceOperation, AccessRequest, AccessAdapter, AccessPolicy } fr
 export type {
   QueryNamespace,
   QueryValues,
-  QueryOwnership,
   QueryLocationAdapter,
   QueryKey,
-  QueryFetchOptions,
-  QueryInvalidation,
-  QueryCacheAdapter,
-  QueryAdapters,
 } from './query'
 
 export type {

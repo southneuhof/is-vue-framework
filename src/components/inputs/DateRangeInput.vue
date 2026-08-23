@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import Datepicker from '@vuepic/vue-datepicker'
 import { commonProps } from './commonprops'
-import { useColorPreference } from '@southneuhof/is-vue-framework/adapters/state'
 import { ref, type PropType, watch, computed } from 'vue'
 import BaseInput from './BaseInput.vue'
+import { useFrameworkUi } from '../../adapters/projectAdapters'
 import { lightFormat } from 'date-fns'
 import { datepickerPopupClass, datepickerPopupConfig, datepickerTeleportProp } from './datepickerPopup'
 
@@ -100,7 +100,7 @@ const testRef = ref()
       :inline="inline"
       v-model="internalValue"
       :format="displayFormatter"
-      :dark="useColorPreference().value === 'dark'"
+      :dark="useFrameworkUi().colorPreference().value === 'dark'"
       :teleport="teleport"
       :config="datepickerPopupConfig"
       :class="datepickerPopupClass"

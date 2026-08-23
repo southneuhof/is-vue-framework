@@ -18,20 +18,22 @@ export {
   frameworkAdaptersKey,
   resolveFrameworkAdapters,
   useFrameworkAdapters,
+  useFrameworkUi,
   defaultDataAdapter,
   defaultAccessAdapter,
   defaultQueryRuntimeDefaults,
+  defaultUiAdapter,
   createMemoryQueryLocationAdapter,
 } from './adapters/projectAdapters'
 export type {
   DataAdapter,
   SchemaAdapter,
+  UiAdapter,
   QueryRuntimeDefaults,
   FrameworkAdaptersInput,
   ResolvedFrameworkAdapters,
 } from './adapters/projectAdapters'
 export * from './renderers'
-export * from './router'
 export * from './adapters/plugin'
 export {
   parseFilenameFromContentDisposition,

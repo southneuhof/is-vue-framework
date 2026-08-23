@@ -32,6 +32,12 @@ export interface SchemaAdapter {
   find: (resource: string, operation: 'record' | 'query' | 'create' | 'update') => ValidationSchema | undefined
 }
 
+/** Project-owned UI environment signals (theme, …). */
+export interface UiAdapter {
+  /** Current color scheme preference; `'dark'` switches date pickers to dark. */
+  colorPreference(): { value: 'light' | 'dark' }
+}
+
 export interface QueryRuntimeDefaults {
   staleTime?: number
   retry?: number
@@ -45,6 +51,8 @@ export interface FrameworkAdaptersInput {
   /** UI access policy. Backend authorization stays authoritative. */
   access?: AccessAdapter
   queryDefaults?: QueryRuntimeDefaults
+  /** UI environment signals; defaults to a static light scheme. */
+  ui?: UiAdapter
 }
 
 export interface ResolvedFrameworkAdapters {
@@ -53,6 +61,7 @@ export interface ResolvedFrameworkAdapters {
   schemas?: SchemaAdapter
   access: AccessAdapter
   queryDefaults: Required<QueryRuntimeDefaults>
+  ui: UiAdapter
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -129,6 +138,10 @@ export const defaultQueryRuntimeDefaults: Required<QueryRuntimeDefaults> = {
 /** Permissive by default: the backend, not the UI, is the security boundary. */
 export const defaultAccessAdapter: AccessAdapter = { allows: () => true }
 
+export const defaultUiAdapter: UiAdapter = {
+  colorPreference: () => ({ value: 'light' }),
+}
+
 export function resolveFrameworkAdapters(input: FrameworkAdaptersInput = {}): ResolvedFrameworkAdapters {
   return {
     data: { ...defaultDataAdapter, ...input.data },
@@ -136,6 +149,7 @@ export function resolveFrameworkAdapters(input: FrameworkAdaptersInput = {}): Re
     schemas: input.schemas,
     access: input.access ?? defaultAccessAdapter,
     queryDefaults: { ...defaultQueryRuntimeDefaults, ...input.queryDefaults },
+    ui: input.ui ?? defaultUiAdapter,
   }
 }
 
@@ -145,4 +159,12 @@ export function useFrameworkAdapters(): ResolvedFrameworkAdapters {
   const adapters = inject(frameworkAdaptersKey)
   if (!adapters) throw new Error('[is-vue-framework] FrameworkPlugin is not installed.')
   return adapters
+}
+
+/**
+ * UI signals degrade to defaults outside plugin install; they are cosmetic,
+ * never behavioral, so missing injection must not break rendering.
+ */
+export function useFrameworkUi(): UiAdapter {
+  return inject(frameworkAdaptersKey)?.ui ?? defaultUiAdapter
 }
