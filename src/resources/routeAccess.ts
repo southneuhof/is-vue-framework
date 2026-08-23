@@ -20,6 +20,11 @@ export function resourceActionForRoute(routeName: string): RegisteredResourceAct
   return actionsByRoute.get(routeName)
 }
 
+/** Every route name a resource action registered under, for boundary checks. */
+export function registeredResourceActionNames(): string[] {
+  return [...actionsByRoute.keys()]
+}
+
 export function resetResourceActionRegistry(): void {
   actionsByRoute.clear()
 }
