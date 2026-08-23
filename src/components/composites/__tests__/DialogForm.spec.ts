@@ -107,6 +107,32 @@ function typeName(view: ReturnType<typeof mountCore>, value: string) {
 }
 
 describe('DialogForm', () => {
+  it('derives submit from a resource action bag run when submit is absent', async () => {
+    const run = vi.fn(async (draft: Record<string, unknown>) => ({ id: 'one', ...draft }))
+    const view = mountDialogForm({ props: { run, title: 'Create record', submit: undefined } })
+    await flush()
+    const save = button(view.view, 'Save')
+    expect(save).toBeDefined()
+    typeName(view.view, 'Ada')
+    save!.click()
+    await flush()
+    await flush()
+    expect(run).toHaveBeenCalledWith({ name: 'Ada' })
+  })
+
+  it('prefers an explicit submit over the bag run', async () => {
+    const run = vi.fn(async () => undefined)
+    const submit = vi.fn(async (draft: Record<string, unknown>) => ({ id: 'one', ...draft }))
+    const view = mountDialogForm({ props: { run, submit, title: 'Create record' } })
+    await flush()
+    typeName(view.view, 'Ada')
+    button(view.view, 'Save')!.click()
+    await flush()
+    await flush()
+    expect(submit).toHaveBeenCalledWith({ name: 'Ada' })
+    expect(run).not.toHaveBeenCalled()
+  })
+
   it('forwards dialog, content, and field slots with default and custom labels', async () => {
     const triggerScopes: Record<string, unknown>[] = []
     const view = mountDialogForm({

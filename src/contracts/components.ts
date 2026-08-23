@@ -182,4 +182,9 @@ export type DialogFormProps<
   cancelLabel?: string
   submitLabel?: string
   submittingLabel?: string
+  /**
+   * Resource action bags bind directly (`v-bind="resource.create()"`); when
+   * `submit` is absent, `run` is forwarded to Form as the submit target.
+   */
+  run?: FormSubmitHandler<TInput, TResult> | FormSubmitAction<TInput>
 }

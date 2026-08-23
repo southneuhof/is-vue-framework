@@ -55,16 +55,19 @@ const formBindings = computed<Record<string, unknown>>(() => {
     submitLabel: _submitLabel,
     submittingLabel: _submittingLabel,
     modelValue: _modelValue,
+    run,
     ...formProps
   } = props
 
   const bindings: Record<string, unknown> = { ...formProps }
+  if (!bindings.submit && run) bindings.submit = run
   if (hasDraftModelValue) bindings.modelValue = props.modelValue
   if (hasDraftModelListener) {
     bindings['onUpdate:modelValue'] = (value: Record<string, unknown>) => emit('update:modelValue', value)
   }
   return bindings
 })
+const hasSubmit = computed(() => Boolean(props.submit || props.run))
 
 const forwardedFormSlots = computed(() =>
   Object.keys(slots).filter((name) => name === 'loading' || name === 'load-error' || name.startsWith('input:')),
@@ -197,7 +200,7 @@ defineExpose({
                   {{ cancelLabel }}
                 </Button>
                 <Button
-                  v-if="props.submit"
+                  v-if="hasSubmit"
                   type="submit"
                   class="w-full sm:w-auto"
                   :disabled="actionsDisabled"
