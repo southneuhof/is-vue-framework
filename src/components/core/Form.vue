@@ -265,13 +265,16 @@ async function submit() {
     return
   }
 
-  if (!props.submit) {
+  const submitTarget = props.submit
+  if (!submitTarget) {
     throw new Error('[is-vue-framework] Form needs submit unless it is bound with v-model.')
   }
 
   submitting.value = true
   try {
-    const result = await props.submit(validation.data as Record<string, unknown>)
+    const result = await (typeof submitTarget === 'function'
+      ? submitTarget(validation.data as Record<string, unknown>)
+      : submitTarget.run(validation.data as Record<string, unknown>))
     emit('submitted', result)
   } catch (error) {
     const normalized = (props.normalizeError ?? adapters.data.normalizeError)(error)

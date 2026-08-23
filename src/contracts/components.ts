@@ -105,6 +105,14 @@ export type FormSubmitHandler<TInput extends object = Record<string, unknown>, T
   draft: TInput,
 ) => MaybePromise<TResult>
 
+/**
+ * Structural submit target: any object exposing `run(draft)` — e.g. a resource
+ * action bag — is accepted without importing resources here.
+ */
+export interface FormSubmitAction<TInput extends object = Record<string, unknown>> {
+  run(input: TInput): MaybePromise<unknown>
+}
+
 export interface FormPropsBase<TInput extends object = Record<string, unknown>, TResult = unknown> {
   fields: FieldsInput<TInput, TInput>
   /** Prefilled values; loaded values override these, and user edits override both. */
@@ -128,7 +136,8 @@ export interface FormPropsBase<TInput extends object = Record<string, unknown>, 
 /** Normal Form operation. Submission is supplied by its resource or caller. */
 export interface FormSubmitProps<TInput extends object = Record<string, unknown>, TResult = unknown>
   extends FormPropsBase<TInput, TResult> {
-  submit: FormSubmitHandler<TInput, TResult>
+  /** A plain draft handler or a structural `{ run(draft) }` action bag. */
+  submit: FormSubmitHandler<TInput, TResult> | FormSubmitAction<TInput>
   modelValue?: never
 }
 
@@ -139,7 +148,8 @@ export interface FormSubmitProps<TInput extends object = Record<string, unknown>
 export interface FormModelProps<TInput extends object = Record<string, unknown>, TResult = unknown>
   extends FormPropsBase<TInput, TResult> {
   modelValue: Partial<TInput> | undefined
-  submit?: FormSubmitHandler<TInput, TResult>
+  /** A plain draft handler or a structural `{ run(draft) }` action bag. */
+  submit?: FormSubmitHandler<TInput, TResult> | FormSubmitAction<TInput>
 }
 
 export type FormProps<TInput extends object = Record<string, unknown>, TResult = unknown> =
